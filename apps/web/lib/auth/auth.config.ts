@@ -20,10 +20,24 @@ export const authConfig: NextAuthConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
       const isOnDashboard = nextUrl.pathname.startsWith('/dashboard')
+      const isOnAuthSuccess = nextUrl.pathname.startsWith('/auth-success')
+      const isFromDesktop = nextUrl.searchParams.get('from') === 'desktop'
+
       if (isOnDashboard) {
         if (isLoggedIn) return true
         return false // Redirect unauthenticated users to login page
       } else if (isLoggedIn) {
+        // If coming from desktop, redirect to auth-success
+        if (isFromDesktop) {
+           // Avoid infinite redirect if already on auth-success
+           if (isOnAuthSuccess) return true
+           return Response.redirect(new URL('/auth-success?from=desktop', nextUrl))
+        }
+        
+        // Allow access to auth-success
+        if (isOnAuthSuccess) return true
+
+        // Default redirect to dashboard
         return Response.redirect(new URL('/dashboard', nextUrl))
       }
       return true

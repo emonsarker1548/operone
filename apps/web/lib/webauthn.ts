@@ -58,6 +58,7 @@ export async function verifyRegistrationResponseForUser(
     expectedChallenge,
     expectedOrigin: webAuthnConfig.origin,
     expectedRPID: webAuthnConfig.rpID,
+    requireUserVerification: false,
   })
 
   return verification
@@ -102,6 +103,7 @@ export async function verifyAuthenticationResponseForUser(
       credentialPublicKey: Buffer.from(authenticator.credentialPublicKey, 'base64'),
       counter: authenticator.counter,
     },
+    requireUserVerification: false,
   })
 
   return verification

@@ -53,6 +53,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         transports: response.response.transports
           ? JSON.stringify(response.response.transports)
           : null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     })
 

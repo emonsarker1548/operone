@@ -65,23 +65,36 @@ export default async function AuthSuccessPage({
                         </svg>
                     </div>
                     <h1 className="text-3xl font-bold">Authentication Successful!</h1>
-                    <p className="text-muted-foreground">Redirecting to Operone Desktop App...</p>
-                    <a
-                        href={deepLink}
-                        className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition"
-                    >
-                        Open Operone Desktop
-                    </a>
+                    <p className="text-muted-foreground">You can now return to the Operone Desktop App</p>
+
+                    <div className="flex flex-col gap-3">
+                        <a
+                            href={deepLink}
+                            className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition"
+                        >
+                            Open Operone Desktop
+                        </a>
+                        <button
+                            onClick={() => window.close()}
+                            className="inline-block px-6 py-3 bg-secondary text-secondary-foreground rounded-lg font-semibold hover:bg-secondary/80 transition"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+
                     <p className="text-sm text-muted-foreground">
-                        If the app doesn&apos;t open automatically, click the button above
+                        Click &quot;Open Operone Desktop&quot; to continue or &quot;Cancel&quot; to stay here
                     </p>
+
                     <script
                         dangerouslySetInnerHTML={{
                             __html: `
-                                // Auto-redirect after 2 seconds
+                                // Show confirmation dialog after 1 second
                                 setTimeout(() => {
-                                    window.location.href = '${deepLink}';
-                                }, 2000);
+                                    if (confirm('Open Operone Desktop App?\\n\\nClick OK to open the app, or Cancel to stay on this page.')) {
+                                        window.location.href = '${deepLink}';
+                                    }
+                                }, 1000);
                             `,
                         }}
                     />

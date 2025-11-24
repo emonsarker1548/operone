@@ -9,15 +9,16 @@ import { Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import { signIn, useSession } from 'next-auth/react'
 import { PasskeyIcon } from '@/components/icons/passkey'
+import { useToast } from '@repo/ui'
 
 export default function LoginPage() {
     const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
     const [isGoogleLoading, setIsGoogleLoading] = useState(false)
     const [isGithubLoading, setIsGithubLoading] = useState(false)
     const router = useRouter()
     const searchParams = useSearchParams()
     const { data: session, status } = useSession()
+    const { toast } = useToast()
 
     const isFromDesktop = searchParams.get('from') === 'desktop'
     const callbackUrl = searchParams.get('callbackUrl') || (isFromDesktop ? '/auth-success?from=desktop' : '/dashboard')
@@ -41,7 +42,6 @@ export default function LoginPage() {
 
     const handlePasskeyLogin = async () => {
         setIsPasskeyLoading(true)
-        setError(null)
 
         try {
             // Get authentication options from server
@@ -55,7 +55,12 @@ export default function LoginPage() {
 
             if (!optionsResponse.ok) {
                 const errorData = await optionsResponse.json()
-                throw new Error(errorData.error || 'Failed to get authentication options')
+                toast({
+                    title: "Error",
+                    description: errorData.error || 'Failed to get authentication options',
+                    variant: "destructive",
+                })
+                return
             }
 
             const { options } = await optionsResponse.json()
@@ -63,35 +68,41 @@ export default function LoginPage() {
             // Start authentication with the browser
             const authenticationResponse = await startAuthentication(options)
 
-            // Verify authentication with server
-            const verificationResponse = await fetch('/api/webauthn/authenticate/verify', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    response: authenticationResponse,
-                    challenge: options.challenge,
-                    email: undefined,
-                }),
+            // Verify authentication with NextAuth
+            const result = await signIn('webauthn', {
+                response: JSON.stringify(authenticationResponse),
+                challenge: options.challenge,
+                redirect: false,
+                callbackUrl: callbackUrl,
             })
 
-            if (!verificationResponse.ok) {
-                throw new Error('Failed to verify authentication')
+            if (result?.error) {
+                toast({
+                    title: "Login Failed",
+                    description: result.error,
+                    variant: "destructive",
+                })
+                return
             }
 
-            const { verified, user } = await verificationResponse.json()
-
-            if (verified && user) {
-                // Redirect to dashboard
+            if (result?.ok) {
+                // Redirect to callback URL
                 router.push(callbackUrl)
                 router.refresh()
             } else {
-                throw new Error('Authentication verification failed')
+                toast({
+                    title: "Error",
+                    description: "Authentication failed",
+                    variant: "destructive",
+                })
             }
         } catch (err) {
             console.error('Passkey login error:', err)
-            setError(err instanceof Error ? err.message : 'Failed to login with passkey')
+            toast({
+                title: "Error",
+                description: err instanceof Error ? err.message : 'Failed to login with passkey',
+                variant: "destructive",
+            })
         } finally {
             setIsPasskeyLoading(false)
         }
@@ -194,9 +205,7 @@ export default function LoginPage() {
                         )}
                     </Button>
 
-                    {error && (
-                        <p className="text-sm text-destructive text-center">{error}</p>
-                    )}
+
 
                     <p className="text-xs text-muted-foreground text-center">
                         Use your device&apos;s biometric authentication or security key

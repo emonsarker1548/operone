@@ -1,14 +1,76 @@
 import NextAuth from 'next-auth'
 import { PrismaAdapter } from '@auth/prisma-adapter'
-import { authConfig } from './config'
+import { authConfig } from './auth.config'
 import { prisma } from '../prisma'
 import type { Adapter } from 'next-auth/adapters'
+import Credentials from 'next-auth/providers/credentials'
+import { verifyAuthenticationResponseForUser } from '../webauthn'
 
 const nextAuth = NextAuth({
   ...authConfig,
+  providers: [
+    ...authConfig.providers,
+    Credentials({
+      id: 'webauthn',
+      name: 'WebAuthn',
+      credentials: {
+        response: { label: 'Response', type: 'text' },
+        challenge: { label: 'Challenge', type: 'text' },
+      },
+      async authorize(credentials) {
+        const { response, challenge } = credentials as any
+        
+        if (!response || !challenge) return null
+
+        try {
+          const responseJson = JSON.parse(response)
+          const credentialID = responseJson.id
+
+          // Find authenticator
+          const authenticator = await prisma.authenticator.findUnique({
+            where: { credentialID },
+            include: { user: true },
+          })
+
+          if (!authenticator) return null
+
+          // Verify
+          const verification = await verifyAuthenticationResponseForUser(
+            responseJson,
+            challenge,
+            {
+              credentialID: authenticator.credentialID,
+              credentialPublicKey: authenticator.credentialPublicKey,
+              counter: authenticator.counter,
+            }
+          )
+
+          if (verification.verified) {
+             // Update counter
+             await prisma.authenticator.update({
+               where: { credentialID },
+               data: { counter: verification.authenticationInfo.newCounter },
+             })
+
+             return {
+               id: authenticator.user.id,
+               email: authenticator.user.email,
+               name: authenticator.user.name,
+               image: authenticator.user.image,
+             }
+          }
+          return null
+        } catch (e) {
+          console.error('WebAuthn auth error:', e)
+          return null
+        }
+      }
+    }),
+  ],
   adapter: PrismaAdapter(prisma) as Adapter,
   session: { strategy: 'jwt' },
   callbacks: {
+    ...authConfig.callbacks,
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
