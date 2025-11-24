@@ -1,15 +1,9 @@
 import { useState } from 'react'
 import { Send, Sparkles } from 'lucide-react'
-import { Button } from './ui/button'
-import { Input } from './ui/input'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
 import { cn } from '@/lib/utils'
-
-interface Message {
-    id: string
-    role: 'user' | 'assistant'
-    content: string
-    timestamp: Date
-}
+import type { Message } from '../../types'
 
 export function ChatInterface() {
     const [messages, setMessages] = useState<Message[]>([])

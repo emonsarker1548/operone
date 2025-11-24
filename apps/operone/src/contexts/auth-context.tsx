@@ -44,6 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(null)
 
         try {
+            if (!window.electronAPI) {
+                console.warn('Electron API not available')
+                setIsLoading(false)
+                return
+            }
+
             const userData = await window.electronAPI.getUser()
             if (userData) {
                 setUser(userData)
@@ -75,8 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const { user: userData } = await response.json()
 
             // Store user data via IPC
-            await window.electronAPI.setUser(userData, token)
-            setUser(userData)
+            if (window.electronAPI) {
+                await window.electronAPI.setUser(userData, token)
+                setUser(userData)
+            }
         } catch (err) {
             console.error('Failed to validate token:', err)
             setError(err instanceof Error ? err.message : 'Authentication failed')
@@ -90,6 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(null)
 
         try {
+            if (!window.electronAPI) {
+                throw new Error('Electron API not available')
+            }
             await window.electronAPI.login()
             // The actual authentication will happen via deep link callback
         } catch (err) {
@@ -104,7 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(null)
 
         try {
-            await window.electronAPI.logout()
+            if (window.electronAPI) {
+                await window.electronAPI.logout()
+            }
             setUser(null)
         } catch (err) {
             console.error('Failed to logout:', err)

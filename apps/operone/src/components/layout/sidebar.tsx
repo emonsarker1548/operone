@@ -1,8 +1,8 @@
 import { MessageSquare, Settings, Database, Plus, LogOut } from 'lucide-react'
-import { Button } from './ui/button'
+import { Button } from '../ui/button'
 import { cn } from '@/lib/utils'
-import { View } from '../App'
-import { useAuth } from './auth-context'
+import type { View } from '../../types'
+import { useAuth } from '../../contexts/auth-context'
 
 interface SidebarProps {
     className?: string
@@ -73,7 +73,7 @@ export function Sidebar({ className, activeView, onNavigate }: SidebarProps) {
             {/* User section at bottom */}
             <div className="px-3 py-4 border-t">
                 <div className="flex items-center gap-3 px-2 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-semibold">
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold">
                         {user?.name?.charAt(0).toUpperCase() || 'U'}
                     </div>
                     <div className="flex-1 min-w-0">
