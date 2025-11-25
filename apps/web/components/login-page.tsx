@@ -93,7 +93,7 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center ">
-            <Card className="w-full max-w-sm border-none bg-transparent shadow-none mx-4">
+            <Card className="w-full max-w-md border-none bg-transparent shadow-none mx-4">
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-2xl font-bold text-center">
                         Welcome to Operone

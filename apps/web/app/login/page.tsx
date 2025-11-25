@@ -1,8 +1,15 @@
-import LoginPageWrapper from '@/components/login-page-wrapper'
-import { metadata as loginMetadata } from './metadata'
+import { auth } from '@/lib/auth'
+import LoginPageComponent from '@/components/login-page'
 
-export { loginMetadata as metadata }
+export default async function LoginPage() {
+  const session = await auth()
 
-export default function LoginPage() {
-  return <LoginPageWrapper />
+  // If user is already logged in and coming from desktop, redirect to auth-success
+  if (session?.user) {
+    // Check if this is a desktop login request
+    // We'll handle this via URL params in the client component
+    return <LoginPageComponent />
+  }
+
+  return <LoginPageComponent />
 }

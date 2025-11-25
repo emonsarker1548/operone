@@ -4,10 +4,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { buttonVariants } from '@/components/ui/button'
 import { CloseButton } from '@/components/close-button'
 import { cn } from '@/lib/utils'
-import { CheckCircle2 } from 'lucide-react'
-import { metadata as authSuccessMetadata } from './metadata'
-
-export { authSuccessMetadata as metadata }
 
 import { prisma } from '@/lib/prisma'
 
@@ -50,32 +46,30 @@ export default async function AuthSuccessPage(props: {
         const deepLink = `operone://auth?token=${token}`
 
         return (
-            <div className="min-h-screen flex items-center justify-center bg-background p-4">
-                <Card className="w-full max-w-md border-none bg-transparent shadow-none">
-                    <CardHeader className="text-center space-y-2">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                            <CheckCircle2 className="h-10 w-10 text-primary" />
-                        </div>
-                        <CardTitle className="text-2xl font-bold">Authentication Successful!</CardTitle>
-                        <CardDescription>
-                            You can now return to the Operone Desktop App
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <a
-                            href={deepLink}
-                            className={cn(buttonVariants({ size: 'lg' }), "w-full")}
-                        >
-                            Open Operone Desktop
-                        </a>
-                        <CloseButton />
-                    </CardContent>
-                    <CardFooter>
-                        <p className="text-xs text-center text-muted-foreground w-full">
-                            Click &quot;Open Operone Desktop&quot; to continue or &quot;Cancel&quot; to stay here
-                        </p>
-                    </CardFooter>
-                </Card>
+            <Card className="w-full max-w-md mx-auto border-none bg-transparent shadow-none">
+                <CardHeader className="text-center space-y-2">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                        <span className="text-3xl">✓</span>
+                    </div>
+                    <CardTitle className="text-2xl font-bold">Authentication Successful!</CardTitle>
+                    <CardDescription>
+                        You can now return to the Operone Desktop App
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <a
+                        href={deepLink}
+                        className={cn(buttonVariants({ size: 'lg' }), "w-full")}
+                    >
+                        Open Operone Desktop
+                    </a>
+                    <CloseButton />
+                </CardContent>
+                <CardFooter>
+                    <p className="text-xs text-center text-muted-foreground w-full">
+                        Click &quot;Open Operone Desktop&quot; to continue or &quot;Cancel&quot; to stay here
+                    </p>
+                </CardFooter>
 
                 <script
                     dangerouslySetInnerHTML={{
@@ -89,9 +83,8 @@ export default async function AuthSuccessPage(props: {
                         `,
                     }}
                 />
-            </div>
+            </Card>
         )
-
     }
 
     // Otherwise, just redirect to dashboard

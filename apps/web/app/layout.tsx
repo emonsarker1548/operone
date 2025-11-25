@@ -3,7 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProviderWrapper } from "@/components/providers/session-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { metadata as rootMetadata } from "./metadata";
+import type { Metadata } from "next";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -14,7 +14,14 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
 });
 
-export { rootMetadata as metadata };
+
+export const metadata: Metadata = {
+  title: "Operone - Modern Stack for Rapid Development",
+  description: "Build faster with our pre-configured monorepo. Includes Next.js, Tailwind CSS, TypeScript, and authentication out of the box.",
+  icons: {
+    icon: "/logo/passkey.svg",
+  },
+};
 
 export default function RootLayout({
   children,

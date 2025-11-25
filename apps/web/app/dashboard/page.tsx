@@ -1,14 +1,9 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { PasskeyIcon } from '@/components/icons/passkey'
 import { ProfileCard } from '@/components/profile-card'
 import { PasskeyManagement } from '@/components/passkey-management'
 import { SessionManagement } from '@/components/session-management'
-import { Monitor } from 'lucide-react'
-import { metadata as dashboardMetadata } from './metadata'
-
-export { dashboardMetadata as metadata }
 
 export default async function DashboardPage() {
     const session = await auth()
@@ -18,59 +13,41 @@ export default async function DashboardPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background p-4 sm:p-8">
-            <div className="max-w-4xl mx-auto space-y-6">
-                <Card>
-                    <CardHeader className="text-center">
-                        <CardTitle className="text-xl font-bold">
-                            Welcome {session.user?.name}!
-                        </CardTitle>
-                        <CardDescription>
-                            You are successfully authenticated
-                        </CardDescription>
-                    </CardHeader>
-                </Card>
-
-                <ProfileCard />
-
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center space-x-3">
-                            <PasskeyIcon />
-                            <div>
-                                <CardTitle className="text-xl font-bold">
-                                    Passkeys
-                                </CardTitle>
-                                <CardDescription>
-                                    Manage your passwordless authentication methods
-                                </CardDescription>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <PasskeyManagement />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center space-x-3">
-                            <Monitor className="h-6 w-6" />
-                            <div>
-                                <CardTitle className="text-xl font-bold">
-                                    Active Sessions
-                                </CardTitle>
-                                <CardDescription>
-                                    View and manage your active login sessions
-                                </CardDescription>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <SessionManagement />
-                    </CardContent>
-                </Card>
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
+                <p className="text-muted-foreground">Manage your account and security settings</p>
             </div>
+            
+            <ProfileCard />
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-xl font-bold">
+                        Security
+                    </CardTitle>
+                    <CardDescription>
+                        Manage your authentication methods
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <PasskeyManagement />
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-xl font-bold">
+                        Active Sessions
+                    </CardTitle>
+                    <CardDescription>
+                        View and manage your active login sessions
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <SessionManagement />
+                </CardContent>
+            </Card>
         </div>
     )
 }

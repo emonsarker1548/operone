@@ -21,25 +21,28 @@ export const authConfig: NextAuthConfig = {
       const isLoggedIn = !!auth?.user
       const isOnDashboard = nextUrl.pathname.startsWith('/dashboard')
       const isOnAuthSuccess = nextUrl.pathname.startsWith('/auth-success')
+      const isOnLogin = nextUrl.pathname.startsWith('/login')
       const isFromDesktop = nextUrl.searchParams.get('from') === 'desktop'
 
+      // Protect dashboard routes - require authentication
       if (isOnDashboard) {
         if (isLoggedIn) return true
         return false // Redirect unauthenticated users to login page
-      } else if (isLoggedIn) {
-        // If coming from desktop, redirect to auth-success
-        if (isFromDesktop) {
-           // Avoid infinite redirect if already on auth-success
-           if (isOnAuthSuccess) return true
-           return Response.redirect(new URL('/auth-success?from=desktop', nextUrl))
-        }
-        
-        // Allow access to auth-success
-        if (isOnAuthSuccess) return true
-
-        // Default redirect to dashboard
+      }
+      
+      // If logged in and trying to access login page, redirect to dashboard
+      if (isLoggedIn && isOnLogin) {
         return Response.redirect(new URL('/dashboard', nextUrl))
       }
+      
+      // Handle desktop authentication flow
+      if (isLoggedIn && isFromDesktop) {
+        // Avoid infinite redirect if already on auth-success
+        if (isOnAuthSuccess) return true
+        return Response.redirect(new URL('/auth-success?from=desktop', nextUrl))
+      }
+      
+      // Allow access to all other pages (including root page)
       return true
     },
   },
