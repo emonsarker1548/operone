@@ -938,7 +938,7 @@ export const PromptInputButton = ({
       variant={variant}
       {...props}
     >
-      {children ?? <PlusIcon className="size-4" />}
+      {children}
     </InputGroupButton>
   );
 };
