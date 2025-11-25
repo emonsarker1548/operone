@@ -130,8 +130,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={sidebarData.navMain} />
         
         {/* Chats Section */}
-        <SidebarGroup className="group-data-[collapsible=icon]:hidden gap-0 py-1 px-2">
-          <SidebarGroupLabel>
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden gap-0 py-1">
+          <SidebarGroupLabel className="px-0">
             <SidebarMenuButton 
               onClick={() => toggleSection('chats')}
               className="w-full justify-between"
@@ -169,7 +169,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
 
         {/* Projects Section */}
-        <SidebarGroup className="group-data-[collapsible=icon]:hidden gap-0 py-1 px-2">
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden gap-0 py-1">
           <SidebarGroupLabel>
             <SidebarMenuButton 
               onClick={() => toggleSection('projects')}
