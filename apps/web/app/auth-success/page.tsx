@@ -1,11 +1,11 @@
-import { redirect } from 'next/navigation'
-import { auth } from '@/lib/auth'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { buttonVariants } from '@/components/ui/button'
-import { CloseButton } from '@/components/close-button'
-import { cn } from '@/lib/utils'
+'use client'
 
-import { prisma } from '@/lib/prisma'
+import { redirect } from 'next/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useEffect, useState } from 'react'
+import { ExternalLink, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react'
 
 function generateToken(): string {
     const array = new Uint8Array(32)
@@ -13,80 +13,148 @@ function generateToken(): string {
     return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
-async function storeTokenForUser(userId: string): Promise<string> {
-    const token = generateToken()
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
-
-    await prisma.desktopAuthToken.create({
-        data: {
-            token,
-            userId,
-            expires: expiresAt
-        }
-    })
-
-    return token
-}
-
-export default async function AuthSuccessPage(props: {
+export default function AuthSuccessPage(props: {
     searchParams: Promise<{ token?: string; from?: string }>
 }) {
-    const searchParams = await props.searchParams
-    const { token, from } = searchParams
-    const session = await auth()
+    const [token, setToken] = useState<string>('')
+    const [deepLink, setDeepLink] = useState<string>('')
+    const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<string>('')
 
-    if (!session || !session.user) {
-        redirect('/login')
-    }
+    useEffect(() => {
+        const initializeAuth = async () => {
+            try {
+                const searchParams = await props.searchParams
+                const { token: searchToken, from } = searchParams
+                
+                // Check if user is authenticated
+                const response = await fetch('/api/auth/session')
+                const session = await response.json()
+                
+                if (!session?.user) {
+                    redirect('/login')
+                    return
+                }
 
-    // If coming from desktop login or has token
-    if (token || from === 'desktop') {
-        // Generate a secure token for the desktop app
-        const token = await storeTokenForUser(session.user.id!)
-        const deepLink = `operone://auth?token=${token}`
+                // If coming from desktop login or has token
+                if (searchToken || from === 'desktop') {
+                    // Generate a secure token for the desktop app
+                    const newToken = generateToken()
+                    const tokenResponse = await fetch('/api/auth/store-token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: newToken, userId: session.user.id })
+                    })
+                    
+                    if (!tokenResponse.ok) {
+                        throw new Error('Failed to store token')
+                    }
+                    
+                    const tokenData = await tokenResponse.json()
+                    setToken(tokenData.token)
+                    setDeepLink(`operone://auth?token=${tokenData.token}`)
+                } else {
+                    // Otherwise, just redirect to dashboard
+                    redirect('/dashboard')
+                }
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Authentication failed')
+            } finally {
+                setIsLoading(false)
+            }
+        }
 
+        initializeAuth()
+    }, [props.searchParams])
+
+    if (isLoading) {
         return (
-            <Card className="w-full max-w-md mx-auto border-none bg-transparent shadow-none">
-                <CardHeader className="text-center space-y-2">
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                        <span className="text-3xl">✓</span>
-                    </div>
-                    <CardTitle className="text-2xl font-bold">Authentication Successful!</CardTitle>
-                    <CardDescription>
-                        You can now return to the Operone Desktop App
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <a
-                        href={deepLink}
-                        className={cn(buttonVariants({ size: 'lg' }), "w-full")}
-                    >
-                        Open Operone Desktop
-                    </a>
-                    <CloseButton />
-                </CardContent>
-                <CardFooter>
-                    <p className="text-xs text-center text-muted-foreground w-full">
-                        Click &quot;Open Operone Desktop&quot; to continue or &quot;Cancel&quot; to stay here
-                    </p>
-                </CardFooter>
-
-                <script
-                    dangerouslySetInnerHTML={{
-                        __html: `
-                            // Show confirmation dialog after 1 second
-                            setTimeout(() => {
-                                if (confirm('Open Operone Desktop App?\\n\\nClick OK to open the app, or Cancel to stay on this page.')) {
-                                    window.location.href = '${deepLink}';
-                                }
-                            }, 1000);
-                        `,
-                    }}
-                />
-            </Card>
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <Card className="w-full max-w-sm">
+                    <CardContent className="flex flex-col items-center justify-center py-12 space-y-4">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-green-600 border-t-transparent"></div>
+                        <div className="text-center space-y-2">
+                            <h3 className="text-lg font-semibold">Preparing Authentication</h3>
+                            <p className="text-muted-foreground text-sm">Setting up your secure token...</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         )
     }
 
-    // Otherwise, just redirect to dashboard
-    redirect('/dashboard')
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <Card className="w-full max-w-sm">
+                    <CardHeader className="text-center space-y-3">
+                        <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+                        <CardTitle className="text-red-700">Authentication Error</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                        <Button 
+                            onClick={() => window.location.reload()} 
+                            variant="outline" 
+                            className="w-full"
+                        >
+                            Try Again
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
+    if (!token || !deepLink) {
+        return null
+    }
+
+    return (
+            <Card className="w-full max-w-md border-none shadow-none bg-transparent">
+                <CardHeader className="text-center space-y-6 pb-8">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-transparent border-2 border-green-500">
+                            <CheckCircle className="h-8 w-8 text-green-600" />
+                    </div>
+                    <div className="space-y-3">
+                        <CardTitle className="text-2xl font-bold text-green-700">Authentication Successful!</CardTitle>
+                        <CardDescription className='text-muted-foreground'>
+                            You can now return to the Operone Desktop App
+                        </CardDescription>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-4">
+                        <Button
+                            asChild
+                            variant="default"
+                            size="sm"
+                            className="w-full hover:bg-green-900  bg-green-700 text-white h-8"
+                        >
+                            <a href={deepLink} className="flex items-center justify-center">
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Open Operone Desktop
+                            </a>
+                        </Button>
+                        
+                        <div className="w-full text-center">
+                            <AlertCircle className="h-4 w-4 mr-2 inline text-xs" />
+                            <span className="text-primary text-xs">
+                                Having trouble with login?{' '}
+                                <a 
+                                    href="/auth-success/troubleshoot" 
+                                    className="underline text-green-700 transition-colors"
+                                >
+                                    Click here
+                                </a>
+                            </span>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+    )
+
 }
