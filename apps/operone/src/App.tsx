@@ -1,16 +1,14 @@
-import { useState } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { ChatInterface } from './features/chat/chat-interface'
-import { Layout } from './components/layout/layout'
 import { SettingsPanel } from './features/settings/settings-panel'
 import { MemoryInspector } from './features/memory/memory-inspector'
 import { AuthProvider, useAuth } from './contexts/auth-context'
 import { LoginScreen } from './components/auth/login-screen'
+import { AppLayout } from './components/layout/app-layout'
 import faviconUrl from './assets/favicon.ico'
-import type { View } from './types'
 import './App.css'
 
 function AppContent() {
-    const [activeView, setActiveView] = useState<View>('chat')
     const { isAuthenticated, isLoading } = useAuth()
 
     // Show loading state while checking authentication
@@ -35,19 +33,29 @@ function AppContent() {
 
     // Show main app if authenticated
     return (
-        <Layout activeView={activeView} onNavigate={setActiveView}>
-            {activeView === 'chat' && <ChatInterface />}
-            {activeView === 'memory' && <MemoryInspector />}
-            {activeView === 'settings' && <SettingsPanel />}
-        </Layout>
+        <AppLayout>
+            <Routes>
+                <Route path="/dashboard/overview" element={<ChatInterface />} />
+                <Route path="/dashboard/chat" element={<ChatInterface />} />
+                <Route path="/dashboard/memory" element={<MemoryInspector />} />
+                <Route path="/settings/account" element={<SettingsPanel />} />
+                <Route path="/settings/billing" element={<SettingsPanel />} />
+                <Route path="/settings/notifications" element={<SettingsPanel />} />
+                <Route path="/settings" element={<Navigate to="/settings/account" replace />} />
+                <Route path="/" element={<Navigate to="/dashboard/overview" replace />} />
+                <Route path="/dashboard" element={<Navigate to="/dashboard/overview" replace />} />
+            </Routes>
+        </AppLayout>
     )
 }
 
 export default function App() {
     return (
-        <AuthProvider>
-            <AppContent />
-        </AuthProvider>
+        <Router>
+            <AuthProvider>
+                <AppContent />
+            </AuthProvider>
+        </Router>
     )
 }
 

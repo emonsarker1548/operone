@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Button } from '@repo/ui'
-import { Input } from '@repo/ui'
-import { Card } from '@repo/ui'
+import { Button } from '@/components'
+import { Input } from '@/components'
+import { Card } from '@/components'
 
 export function SettingsPanel() {
     const [apiKey, setApiKey] = useState('')

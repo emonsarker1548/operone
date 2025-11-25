@@ -1,8 +1,9 @@
-import { auth } from '@/lib/auth'
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import Image from 'next/image'
-import { CloseButton } from '@/components/close-button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, buttonVariants } from '@repo/ui'
+import { auth } from '@/lib/auth'
+import Link from 'next/link'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { CheckCircle2 } from 'lucide-react'
 

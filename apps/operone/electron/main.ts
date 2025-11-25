@@ -20,7 +20,7 @@ app.commandLine.appendSwitch('disable-dev-shm-usage')
 app.commandLine.appendSwitch('disable-gpu')
 app.commandLine.appendSwitch('disable-gpu-compositing')
 
-import { OSAgent } from '@repo/ai-engine'
+import { OSAgent } from '../../../packages/core-engine/src'
 import { openai } from '@ai-sdk/openai'
 
 // AI Service placeholder - will be initialized when needed

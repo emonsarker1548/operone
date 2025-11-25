@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { Button, ScrollArea } from '@repo/ui'
+import { Button, ScrollArea } from '@/components'
 import { MessageSquare, Plus, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 interface DashboardLayoutProps {

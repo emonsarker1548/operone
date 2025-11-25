@@ -11,44 +11,22 @@ import {
   Loader
 } from "lucide-react"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-  Separator,
-} from "@repo/ui"
+} from "@/components/ui/sidebar"
+import { Separator } from "@/components/ui/separator"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/contexts"
-import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import { NavUserSkeleton } from "@/components/nav-user-skeleton"
 import { UserAvatarWithInfo } from "@/components/user-avatar"
 
 const NavUser = () => {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const sidebar = useSidebar()
-  
-  if (false) { // TODO: Replace with actual loading state check
-    return <NavUserSkeleton />
-  }
-
-  const { logout } = useAuth()
-  const navigate = useNavigate()
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
 
   // Handle feature not implemented clicks
@@ -63,7 +41,6 @@ const NavUser = () => {
       setIsLoggingOut(true)
       await logout()
       toast.success('Logged out successfully')
-      navigate('/login')
     } catch (error) {
       console.error('Error during logout:', error)
       toast.error('Logout failed, please try again')
@@ -73,18 +50,18 @@ const NavUser = () => {
   }
 
   // Add null check for user
-  if (!user) return null
+  if (!user) return <NavUserSkeleton />
 
   return (
     <SidebarMenu>
-      <Separator/>
+      <Separator />
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-              <UserAvatarWithInfo user={user} useThumb={false} />
+              <UserAvatarWithInfo user={user} />
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
@@ -105,21 +82,21 @@ const NavUser = () => {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onSelect={() => navigate('/settings/account/profile')}>
+              <DropdownMenuItem onSelect={() => handleNotImplemented('Account settings')}>
                 <BadgeCheck className="mr-2 h-4 w-4" />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => navigate('/settings/billing/payment')}>
+              <DropdownMenuItem onSelect={() => handleNotImplemented('Billing')}>
                 <CreditCard className="mr-2 h-4 w-4" />
                 Billing
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => navigate('/settings/preferences/notifications')}>
+              <DropdownMenuItem onSelect={() => handleNotImplemented('Notifications')}>
                 <Bell className="mr-2 h-4 w-4" />
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            
+
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <DropdownMenuItem
@@ -129,7 +106,7 @@ const NavUser = () => {
                   {isLoggingOut ? (
                     <>
                       Logging out..
-                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader className="ml-2 h-4 w-4 animate-spin" />
                     </>
                   ) : (
                     'Log out'
@@ -140,7 +117,7 @@ const NavUser = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    You will be redirected to the login page.
+                    You will need to log in again to access your account.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -152,7 +129,7 @@ const NavUser = () => {
                     {isLoggingOut ? (
                       <>
                         Logging out..
-                        <Loader className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader className="ml-2 h-4 w-4 animate-spin" />
                       </>
                     ) : (
                       'Log out'

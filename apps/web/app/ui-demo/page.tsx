@@ -1,4 +1,5 @@
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function UIDemoPage() {
   return (
@@ -6,7 +7,7 @@ export default function UIDemoPage() {
       <div className="space-y-4">
         <h1 className="text-3xl font-bold">UI Components Demo</h1>
         <p className="text-muted-foreground">
-          This page demonstrates the shadcn/ui components from @repo/ui package
+          This page demonstrates the shadcn/ui components from @/components package
         </p>
       </div>
 
@@ -38,7 +39,7 @@ export default function UIDemoPage() {
           <CardHeader>
             <CardTitle>Card Component</CardTitle>
             <CardDescription>
-              This is a card component from @repo/ui
+              This is a card component from @/components
             </CardDescription>
           </CardHeader>
           <CardContent>

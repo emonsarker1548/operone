@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { startAuthentication } from '@simplewebauthn/browser'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import { signIn, useSession } from 'next-auth/react'
 import { PasskeyIcon } from '@/components/icons/passkey'
-import { useToast } from '@repo/ui'
+import { toast } from 'sonner'
 
 export default function LoginPage() {
     const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
@@ -17,7 +18,6 @@ export default function LoginPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const { data: session, status } = useSession()
-    const { toast } = useToast()
 
     const isFromDesktop = searchParams.get('from') === 'desktop'
     const callbackUrl = searchParams.get('callbackUrl') || (isFromDesktop ? '/auth-success?from=desktop' : '/dashboard')
@@ -54,11 +54,7 @@ export default function LoginPage() {
 
             if (!optionsResponse.ok) {
                 const errorData = await optionsResponse.json()
-                toast({
-                    title: "Error",
-                    description: errorData.error || 'Failed to get authentication options',
-                    variant: "destructive",
-                })
+                toast.error(errorData.error || 'Failed to get authentication options')
                 return
             }
 
@@ -76,11 +72,7 @@ export default function LoginPage() {
             })
 
             if (result?.error) {
-                toast({
-                    title: "Login Failed",
-                    description: result.error,
-                    variant: "destructive",
-                })
+                toast.error(result.error || 'Login Failed')
                 return
             }
 
@@ -89,19 +81,11 @@ export default function LoginPage() {
                 router.push(callbackUrl)
                 router.refresh()
             } else {
-                toast({
-                    title: "Error",
-                    description: "Authentication failed",
-                    variant: "destructive",
-                })
+                toast.error("Authentication failed")
             }
         } catch (err) {
             console.error('Passkey login error:', err)
-            toast({
-                title: "Error",
-                description: err instanceof Error ? err.message : 'Failed to login with passkey',
-                variant: "destructive",
-            })
+            toast.error(err instanceof Error ? err.message : 'Failed to login with passkey')
         } finally {
             setIsPasskeyLoading(false)
         }

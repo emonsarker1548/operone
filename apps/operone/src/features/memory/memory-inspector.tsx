@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Card } from '@repo/ui'
-import { Input } from '@repo/ui'
+import { Card } from '@/components'
+import { Input } from '@/components'
 import { Search } from 'lucide-react'
 
 export function MemoryInspector() {

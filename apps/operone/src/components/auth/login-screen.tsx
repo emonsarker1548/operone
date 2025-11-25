@@ -1,6 +1,6 @@
 import { useAuth } from '../../contexts/auth-context'
-import { Button, Card, CardContent } from '@repo/ui'
-import { Loader2, Shield } from 'lucide-react'
+import { Button, Card, CardContent } from '@/components'
+import { Loader2 } from 'lucide-react'
 import faviconUrl from '../../assets/favicon.ico'
 
 export function LoginScreen() {

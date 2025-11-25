@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card, CardContent } from "@repo/ui";
+import { Button, Card, CardContent } from "@/components";
 import { Loader2, LogOut, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
