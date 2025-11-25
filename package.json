@@ -1,4 +1,14 @@
 {
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/ai/*",
+    "packages/system/*",
+    "packages/shared/*",
+    "packages/python-modules/*",
+    "packages/rust-core/*",
+    "packages/cpp-extensions/*"
+  ],
   "name": "operone",
   "private": true,
   "scripts": {

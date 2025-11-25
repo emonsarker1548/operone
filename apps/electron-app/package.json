@@ -1,5 +1,5 @@
 {
-    "name": "operone",
+    "name": "@apps/electron-app",
     "version": "0.1.0",
     "description": "Operone - The unicercal ai integrated desktop application",
     "author": "Operone Team",
