@@ -87,23 +87,23 @@ const data: {
 
     {
       title: "Security & Access",
-      url: "/dashboard/settings",
+      url: "/dashboard/security",
       icon: Lock,
       items: [
-        { title: "Security log", url: "/dashboard/settings/security-log", icon: History },
+        { title: "Security log", url: "/dashboard/security/log", icon: History },
       ],
     },
 
     { category: "Developer Tools" },
     {
       title: "Developer",
-      url: "/dashboard/settings",
+      url: "/dashboard/developer",
       icon: Code,
       items: [
-        { title: "AI Providers", url: "/dashboard/settings/ai-providers", icon: Brain },
-        { title: "Repositories", url: "/dashboard/settings/repositories", icon: Package },
-        { title: "Apps & OAuth", url: "/dashboard/settings/apps", icon: Smartphone },
-        { title: "Developer settings", url: "/dashboard/settings/developer", icon: Code },
+        { title: "AI Providers", url: "/dashboard/developer/ai-providers", icon: Brain },
+        { title: "Repositories", url: "/dashboard/developer/repositories", icon: Package },
+        { title: "Apps & OAuth", url: "/dashboard/developer/apps", icon: Smartphone },
+        { title: "Dev settings", url: "/dashboard/developer/settings", icon: Code },
       ],
     },
   ],

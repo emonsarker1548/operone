@@ -178,7 +178,7 @@ export default function PasskeysPage() {
                                 </div>
                                 <h3 className="text-lg font-semibold">No passkeys found</h3>
                                 <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto">
-                                    You haven't created any passkeys yet. Add one to sign in without a password.
+                                    You haven&apos;t created any passkeys yet. Add one to sign in without a password.
                                 </p>
                                 <Button onClick={handleRegister} disabled={isRegistering} className="mt-6" variant="outline">
                                     Create your first passkey
@@ -265,7 +265,7 @@ export default function PasskeysPage() {
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Passkey?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Are you sure you want to delete {deletingPasskey?.name || 'this passkey'}?
+                                        Are you sure you want to delete {deletingPasskey?.name || 'this passkey&apos;'}?
                                         This action cannot be undone.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
