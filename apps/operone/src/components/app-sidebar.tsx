@@ -31,8 +31,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   
   // Optimized data structure like ChatGPT
   const [expandedSections, setExpandedSections] = React.useState({
-    chats: true,
-    projects: true
+    chats: false,
+    projects: false
   })
 
   const toggleSection = (section: 'chats' | 'projects') => {
@@ -88,7 +88,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <div className="relative group flex-1">
                 <SidebarMenuButton size="lg" asChild className="flex-1">
                   <Link to="/dashboard/overview">
