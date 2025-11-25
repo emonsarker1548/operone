@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useCallback, useMemo } from "react"
-import { Loader2, Mic, Paperclip, Send, Pause, Upload } from "lucide-react"
+import { Loader2, Send } from "lucide-react"
 
 import {
   PromptInput,
@@ -70,16 +70,11 @@ export const ChatPromptInput = React.memo(function ChatPromptInput({
       <PromptInputFooter>
         <PromptInputTools>
           <PromptInputButton variant="ghost" size="sm">
-            <Upload className="h-4 w-4" />
+            <Send className="h-4 w-4" />
+            <span className="sr-only">Send message</span>
           </PromptInputButton>
-          <PromptInputButton variant="ghost" size="sm">
-            <Paperclip className="h-4 w-4" />
-          </PromptInputButton>
-          <PromptInputButton variant="ghost" size="sm">
-            <Mic className="h-4 w-4" />
-            <span className="sr-only">Voice input</span>
-          </PromptInputButton>
-          <PromptInputSelect
+        </PromptInputTools>
+        <PromptInputSelect
             value={selectedModel}
             onValueChange={setSelectedModel}
             disabled={isLoading}
@@ -177,13 +172,7 @@ export const ChatPromptInput = React.memo(function ChatPromptInput({
             </PromptInputSelectContent>
           </PromptInputSelect>
         </PromptInputTools>
-        <PromptInputSubmit disabled={!input.trim()} status={status}>
-          {status === 'streaming' ? (
-            <Pause className="h-4 w-4" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </PromptInputSubmit>
+        <PromptInputSubmit disabled={!input.trim()} status={status} />
       </PromptInputFooter>
     </PromptInput>
   );
