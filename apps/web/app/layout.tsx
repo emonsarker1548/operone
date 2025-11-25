@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProviderWrapper } from "@/components/providers/session-provider";
 import { Toaster } from "@/components/ui/sonner";
+import ErrorBoundary from "@/components/error-boundary";
 import type { Metadata } from "next";
 
 const geistSans = localFont({
@@ -31,17 +32,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
-        <SessionProviderWrapper>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        </SessionProviderWrapper>
+        <ErrorBoundary>
+          <SessionProviderWrapper>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {children}
+              <Toaster />
+            </ThemeProvider>
+          </SessionProviderWrapper>
+        </ErrorBoundary>
       </body>
     </html>
   );
