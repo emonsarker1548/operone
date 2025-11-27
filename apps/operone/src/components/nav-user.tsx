@@ -1,10 +1,12 @@
 "use client"
 
+import { useState } from "react"
 import {
   BadgeCheck,
   Bell,
   ChevronsUpDown,
   CreditCard,
+  Loader2,
   LogOut,
 } from "lucide-react"
 import { Link } from "react-router-dom"
@@ -43,9 +45,16 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const { logout } = useAuth()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const handleLogout = async () => {
-    await logout()
+    setIsLoggingOut(true)
+    try {
+      await logout()
+    } catch (error) {
+      console.error('Logout failed:', error)
+      setIsLoggingOut(false)
+    }
   }
 
   return (
@@ -108,9 +117,13 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut />
-              Log out
+            <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
+              {isLoggingOut ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <LogOut />
+              )}
+              {isLoggingOut ? 'Logging out...' : 'Log out'}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

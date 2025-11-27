@@ -2,7 +2,7 @@ export interface Agent {
   id: string;
   name: string;
   role: 'os' | 'assistant';
-  think(input: string): Promise<string>;
+  think(input: string, options?: any): Promise<string>;
   act(action: string): Promise<void>;
   observe(): Promise<string>;
 }
@@ -123,4 +123,23 @@ export interface ChatMessage {
 export interface AIServiceConfig {
   defaultProvider: ProviderType;
   providers: Record<string, ProviderConfig>;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  category: string;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  conversationIds: string[];
+}
+
+export interface Chat {
+  id: string;
+  title: string;
+  projectId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  messages: ChatMessage[];
 }

@@ -23,6 +23,7 @@
         "@repo/mcp-tools": "workspace:*",
         "@repo/types": "workspace:*",
         "ai": "^5.0.100",
+        "better-sqlite3": "^12.4.6",
         "zod": "^3.23.8"
     },
     "devDependencies": {

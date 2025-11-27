@@ -5,6 +5,7 @@ import { BrowserAIService } from '@/utils/ollama-detector';
 interface AIContextType {
     // Chat
     messages: ChatMessage[];
+    setMessages: (messages: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => void;
     sendMessage: (content: string) => Promise<void>;
     sendMessageStreaming: (content: string) => Promise<void>;
     sendMessageWithMode: (content: string, mode: MessageType) => Promise<void>;
@@ -34,7 +35,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
     const [activeProvider, setActiveProviderState] = useState<ProviderConfig | null>(null);
     const [allProviders, setAllProviders] = useState<Record<string, ProviderConfig>>({});
     const [browserAIService, setBrowserAIService] = useState<BrowserAIService | null>(null);
-    const [currentMode, setCurrentMode] = useState<MessageType>('text');
+    const [currentMode] = useState<MessageType>('text');
 
     // Load initial configuration
     useEffect(() => {
@@ -54,24 +55,28 @@ export function AIProvider({ children }: { children: ReactNode }) {
             }
 
             if (!window.electronAPI || !window.electronAPI.ai) {
-                console.warn('Electron API not available after retries, initializing browser mode with Ollama detection');
-                
+                console.info('Running in browser mode - Electron API not available');
+                console.info('Initializing browser AI service with Ollama detection...');
+
                 // Initialize browser AI service
                 const browserService = new BrowserAIService();
                 const isAvailable = await browserService.initialize();
-                
+
                 if (isAvailable) {
                     setBrowserAIService(browserService);
                     const config = browserService.getActiveProviderConfig();
                     setActiveProviderState(config);
                     setAllProviders(browserService.getAllProviderConfigs());
-                    console.log('Browser AI service initialized with detected Ollama');
+                    console.info('✓ Browser AI service initialized successfully with Ollama');
                 } else {
-                    console.warn('No Ollama instance detected, AI features will be limited');
+                    console.info('No local Ollama instance detected. AI features will be limited.');
+                    console.info('To use AI features, either:');
+                    console.info('  1. Run the app in Electron mode: pnpm electron:dev');
+                    console.info('  2. Start Ollama locally: https://ollama.ai');
                 }
                 return;
             }
-            
+
             // Electron mode - load configuration normally
             const config = await window.electronAPI.ai.getActiveProvider();
             setActiveProviderState(config);
@@ -125,9 +130,9 @@ export function AIProvider({ children }: { children: ReactNode }) {
                 }
                 return;
             }
-            
+
             console.warn('No AI service available, cannot send message');
-            
+
             // Add a user message to show the attempt
             const userMessage: ChatMessage = {
                 id: Date.now().toString(),
@@ -135,7 +140,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
                 content,
                 timestamp: new Date(),
             };
-            
+
             // Add an error message
             const errorMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
@@ -143,7 +148,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
                 content: 'AI service not available. Please run this app in Electron mode or start Ollama locally for browser mode.',
                 timestamp: new Date(),
             };
-            
+
             setMessages(prev => [...prev, userMessage, errorMessage]);
             return;
         }
@@ -189,7 +194,8 @@ export function AIProvider({ children }: { children: ReactNode }) {
         // Check if electronAPI is available
         if (!window.electronAPI || !window.electronAPI.ai) {
             // Try browser AI service with streaming
-            if (browserAIService && browserAIService.isAvailable()) {
+            // Relaxed check: if service exists, try to use it
+            if (browserAIService) {
                 const userMessage: ChatMessage = {
                     id: Date.now().toString(),
                     role: 'user',
@@ -278,14 +284,91 @@ export function AIProvider({ children }: { children: ReactNode }) {
                 }
                 return;
             }
-            
+
             console.warn('No AI service available, cannot send streaming message');
             return;
         }
 
-        // Electron mode - use existing sendMessage for now
-        // TODO: Implement streaming in Electron backend
-        await sendMessage(content);
+        // Electron mode - use new streaming API
+        const userMessage: ChatMessage = {
+            id: Date.now().toString(),
+            role: 'user',
+            content,
+            timestamp: new Date(),
+        };
+
+        setMessages(prev => [...prev, userMessage]);
+        setIsLoading(true);
+        setStreamingMessage('');
+
+        let accumulatedText = '';
+        let cleanupFunctions: (() => void)[] = [];
+
+        try {
+            // Set up streaming listeners
+            const onToken = (token: string) => {
+                accumulatedText += token;
+                setStreamingMessage(accumulatedText);
+            };
+
+            const onComplete = (fullText: string) => {
+                const aiMessage: ChatMessage = {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: fullText,
+                    timestamp: new Date(),
+                };
+
+                setMessages(prev => [...prev, aiMessage]);
+                setIsLoading(false);
+                setStreamingMessage(null);
+
+                // Cleanup listeners
+                cleanupFunctions.forEach(cleanup => cleanup());
+            };
+
+            const onError = (error: string) => {
+                console.error('Streaming error:', error);
+
+                const errorMessage: ChatMessage = {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: `Error: ${error}`,
+                    timestamp: new Date(),
+                };
+
+                setMessages(prev => [...prev, errorMessage]);
+                setIsLoading(false);
+                setStreamingMessage(null);
+
+                // Cleanup listeners
+                cleanupFunctions.forEach(cleanup => cleanup());
+            };
+
+            // Register listeners
+            cleanupFunctions.push(window.electronAPI.ai.onStreamToken(onToken));
+            cleanupFunctions.push(window.electronAPI.ai.onStreamComplete(onComplete));
+            cleanupFunctions.push(window.electronAPI.ai.onStreamError(onError));
+
+            // Start streaming
+            await window.electronAPI.ai.sendMessageStreaming(content);
+        } catch (error) {
+            console.error('Failed to send streaming message:', error);
+
+            const errorMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: 'Sorry, I encountered an error processing your request.',
+                timestamp: new Date(),
+            };
+
+            setMessages(prev => [...prev, errorMessage]);
+            setIsLoading(false);
+            setStreamingMessage(null);
+
+            // Cleanup listeners
+            cleanupFunctions.forEach(cleanup => cleanup());
+        }
     };
 
     const setActiveProvider = async (id: string) => {
@@ -298,7 +381,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
             console.warn('Electron API not available, cannot set active provider');
             throw new Error('Electron API not available');
         }
-        
+
         try {
             await window.electronAPI.ai.setActiveProvider(id);
             await loadConfiguration();
@@ -318,7 +401,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
             console.warn('Electron API not available, cannot add provider');
             throw new Error('Electron API not available');
         }
-        
+
         try {
             await window.electronAPI.ai.addProvider(id, config);
             await loadConfiguration();
@@ -338,7 +421,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
             console.warn('Electron API not available, cannot remove provider');
             throw new Error('Electron API not available');
         }
-        
+
         try {
             await window.electronAPI.ai.removeProvider(id);
             await loadConfiguration();
@@ -358,7 +441,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
             console.warn('Electron API not available, cannot update provider');
             throw new Error('Electron API not available');
         }
-        
+
         try {
             await window.electronAPI.ai.updateProvider(id, config);
             await loadConfiguration();
@@ -376,7 +459,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
             }
             return { success: false, error: 'Electron API not available' };
         }
-        
+
         try {
             return await window.electronAPI.ai.testProvider(id);
         } catch (error) {
@@ -399,7 +482,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
             console.warn('Electron API not available, cannot get models');
             return [];
         }
-        
+
         try {
             return await window.electronAPI.ai.getModels(provider);
         } catch (error) {
@@ -410,6 +493,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
 
     const value: AIContextType = {
         messages,
+        setMessages,
         sendMessage,
         sendMessageStreaming,
         isLoading,
@@ -422,6 +506,8 @@ export function AIProvider({ children }: { children: ReactNode }) {
         updateProvider,
         testProvider,
         getAvailableModels,
+        currentMode,
+        sendMessageWithMode: sendMessage, // Placeholder for now
     };
 
     return <AIContext.Provider value={value}>{children}</AIContext.Provider>;

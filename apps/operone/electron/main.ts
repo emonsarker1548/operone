@@ -27,6 +27,7 @@ app.commandLine.appendSwitch('disable-gpu')
 app.commandLine.appendSwitch('disable-gpu-compositing')
 
 import { getAIService } from './services/ai-service'
+import { getStorageService } from './services/storage-service'
 
 // AI Service - initialized lazily
 let aiService: ReturnType<typeof getAIService> | null = null
@@ -95,6 +96,10 @@ function createWindow() {
     mainWindow.on('closed', () => {
       mainWindow = null
     })
+
+    // Pass mainWindow to AIService for event forwarding
+    const service = getOrCreateAIService()
+    service.setMainWindow(mainWindow)
   } catch (error) {
     console.error('Failed to create window:', error)
     throw error
@@ -200,6 +205,81 @@ function setupIPCHandlers() {
   ipcMain.handle('ai:getModels', async (_event, providerType: ProviderType) => {
     const service = getOrCreateAIService()
     return service.getModels(providerType)
+  })
+
+
+// ... existing code ...
+
+  // Project Management
+  ipcMain.handle('project:create', async (_event, project: any) => {
+    const service = getStorageService()
+    service.createProject(project)
+    return project
+  })
+
+  ipcMain.handle('project:getAll', async () => {
+    const service = getStorageService()
+    return service.getAllProjects()
+  })
+
+  ipcMain.handle('project:getById', async (_event, id: string) => {
+    const service = getStorageService()
+    return service.getProject(id)
+  })
+
+  ipcMain.handle('project:update', async (_event, { id, updates }: { id: string; updates: any }) => {
+    const service = getStorageService()
+    service.updateProject(id, updates)
+    return service.getProject(id)
+  })
+
+  ipcMain.handle('project:delete', async (_event, id: string) => {
+    const service = getStorageService()
+    service.deleteProject(id)
+    return true
+  })
+
+  // Chat Management
+  ipcMain.handle('chat:create', async (_event, chat: any) => {
+    const service = getStorageService()
+    service.createChat(chat)
+    return chat
+  })
+
+  ipcMain.handle('chat:getAll', async () => {
+    const service = getStorageService()
+    return service.getAllChats()
+  })
+
+  ipcMain.handle('chat:getById', async (_event, chatId: string) => {
+    const service = getStorageService()
+    return service.getChat(chatId)
+  })
+
+  ipcMain.handle('chat:getByProject', async (_event, projectId: string) => {
+    const service = getStorageService()
+    return service.getChatsByProject(projectId)
+  })
+
+  ipcMain.handle('chat:update', async (_event, { id, updates }: { id: string; updates: any }) => {
+    const service = getStorageService()
+    service.updateChat(id, updates)
+    return service.getChat(id)
+  })
+
+  ipcMain.handle('chat:delete', async (_event, chatId: string) => {
+    const service = getStorageService()
+    service.deleteChat(chatId)
+    return true
+  })
+
+  ipcMain.handle('chat:setActive', async (_event, chatId: string) => {
+    store.set('activeChat', chatId)
+    return true
+  })
+
+  ipcMain.handle('chat:getActive', async () => {
+    return store.get('activeChat', null)
   })
 
   // Settings

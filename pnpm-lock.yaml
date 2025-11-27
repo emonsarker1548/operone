@@ -337,6 +337,9 @@ importers:
       ai:
         specifier: ^5.0.100
         version: 5.0.102(zod@3.25.76)
+      better-sqlite3:
+        specifier: ^12.4.6
+        version: 12.4.6
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

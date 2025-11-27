@@ -1,17 +1,20 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import {
-  Sparkles
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useAI } from "@/contexts/ai-context";
-import { useProject } from "@/contexts/project-context";
+import { useModelDetector } from "@/contexts/model-context";
 import type { FileUIPart, ChatStatus } from "ai";
+import type { ChatMessage, Chat } from "@repo/types";
 
 // AI Component Imports
 import { ChatPromptInput } from "./prompt-input";
 import { Message, MessageContent, MessageLoading } from "@/components/ai/message";
 import { Shimmer } from "@/components/ai/shimmer";
-import { 
+import { ReasoningStepsDisplay, type ReasoningStep } from "@/components/ai/reasoning-steps";
+import type { ChatMode } from "@/components/ai/chat-mode-selector";
+import {
   ChatLayout as ChatLayoutContainer,
   ChatMain,
   ChatContent,
@@ -30,26 +33,75 @@ interface ChatLayoutProps {
 
 
 // Main Chat Component using structured layout
-export const ChatLayout = React.memo(function ChatLayout({ 
+export const ChatLayout = React.memo(function ChatLayout({
   className
 }: ChatLayoutProps) {
-  const { 
-    messages, 
-    sendMessageStreaming, 
-    isLoading, 
-    streamingMessage
+  const {
+    messages,
+    sendMessageStreaming,
+    isLoading,
+    streamingMessage,
+    setMessages
   } = useAI();
-  
-  const { 
-    currentChat, 
-    updateChat, 
-    generateChatTitle 
-  } = useProject();
-  
+
+  // Simple local state for chat management (replacing project context)
+  const [currentChat, setCurrentChat] = useState<Chat | null>(null);
+  const [chats, setChats] = useState<Chat[]>([]);
+
+  const updateChat = useCallback((chatId: string, updates: Partial<Chat>) => {
+    setChats(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, ...updates } : chat
+    ));
+    if (currentChat?.id === chatId) {
+      setCurrentChat(prev => prev ? { ...prev, ...updates } : null);
+    }
+  }, [currentChat]);
+
+  const getChatById = useCallback((chatId: string) => {
+    return chats.find(chat => chat.id === chatId);
+  }, [chats]);
+
+  const generateChatTitle = useCallback((chatId: string, messages: ChatMessage[]) => {
+    // Simple title generation - take first message content and truncate
+    const firstMessage = messages.find(m => m.role === 'user');
+    if (firstMessage && firstMessage.content) {
+      const title = firstMessage.content.slice(0, 30) + (firstMessage.content.length > 30 ? '...' : '');
+      updateChat(chatId, { title });
+    }
+  }, [updateChat]);
+
   const [input, setInput] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [chatStatus, setChatStatus] = useState<ChatStatus>("ready");
+  const [chatMode, setChatMode] = useState<ChatMode>("chat");
+  const [reasoningSteps, setReasoningSteps] = useState<ReasoningStep[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [searchParams] = useSearchParams();
+
+  // Load chat from URL params or use current chat
+  useEffect(() => {
+    const chatId = searchParams.get('chatId');
+
+    if (chatId && chatId !== currentChat?.id) {
+      const chat = getChatById(chatId);
+      if (chat) {
+        setCurrentChat(chat);
+        // Ensure messages have required timestamp property
+        const messagesWithTimestamp = (chat.messages || []).map(msg => ({
+          ...msg,
+          timestamp: msg.timestamp || new Date()
+        }));
+        setMessages(messagesWithTimestamp);
+      }
+    } else if (currentChat) {
+      // Ensure messages have required timestamp property
+      const messagesWithTimestamp = (currentChat.messages || []).map(msg => ({
+        ...msg,
+        timestamp: msg.timestamp || new Date()
+      }));
+      setMessages(messagesWithTimestamp);
+    }
+  }, [searchParams, currentChat?.id, getChatById, setMessages]);
 
   // Optimized auto-scroll with useCallback
   const scrollToBottom = useCallback(() => {
@@ -70,10 +122,28 @@ export const ChatLayout = React.memo(function ChatLayout({
     }
   }, [messages, currentChat, generateChatTitle]);
 
+  // Auto-select Ollama model if available and no model selected
+  const { availableModels } = useModelDetector();
+
+  useEffect(() => {
+    if (!selectedModel && availableModels.length > 0) {
+      // Find Ollama models within the available models list
+      const ollamaOptions = availableModels.filter(m => m.provider === 'ollama');
+
+      if (ollamaOptions.length > 0) {
+        // Prefer llama3.2, otherwise take the first one
+        const defaultModel = ollamaOptions.find(m => m.name.includes('llama3.2')) || ollamaOptions[0];
+        if (defaultModel) {
+          setSelectedModel(defaultModel.id);
+        }
+      }
+    }
+  }, [selectedModel, availableModels]);
+
   // Update chat messages in project context
   useEffect(() => {
     if (currentChat && messages.length > 0) {
-      updateChat(currentChat.id, { 
+      updateChat(currentChat.id, {
         messages: messages,
         updatedAt: new Date()
       });
@@ -91,12 +161,45 @@ export const ChatLayout = React.memo(function ChatLayout({
     }
   }, [isLoading, streamingMessage]);
 
+  // Listen for agent events to populate reasoning steps
+  useEffect(() => {
+    if (!window.electronAPI?.ai?.onAgentEvent) return;
+    if (chatMode === 'chat') return; // Only listen in agentic/planning modes
+
+    const cleanup = window.electronAPI.ai.onAgentEvent((payload: any) => {
+      // Handle reasoning events
+      if (payload.topic === 'reasoning' && payload.event) {
+        const eventType = payload.event.split(':')[1]; // e.g., 'step:think' -> 'think'
+
+        if (eventType === 'think' || eventType === 'act' || eventType === 'observe') {
+          const step: ReasoningStep = {
+            type: eventType as 'think' | 'act' | 'observe',
+            content: payload.data?.content || payload.data?.output || '',
+            timestamp: Date.now(),
+            status: 'completed',
+          };
+
+          setReasoningSteps(prev => [...prev, step]);
+        }
+      }
+    });
+
+    return cleanup;
+  }, [chatMode]);
+
+  // Clear reasoning steps when starting new message
+  useEffect(() => {
+    if (isLoading && chatMode !== 'chat') {
+      setReasoningSteps([]);
+    }
+  }, [isLoading, chatMode]);
+
   // Memoized submit handler with proper error handling
   const handleSubmit = useCallback(async (message: { text: string; files: FileUIPart[] }) => {
     if (!message.text.trim()) return;
-    
+
     setInput("");
-    
+
     try {
       await sendMessageStreaming(message.text);
     } catch (error) {
@@ -106,7 +209,7 @@ export const ChatLayout = React.memo(function ChatLayout({
   }, [sendMessageStreaming]);
 
   // Memoized transformed messages with proper typing
-  const transformedMessages = useMemo(() => 
+  const transformedMessages = useMemo(() =>
     messages.map((msg) => ({
       id: msg.id,
       role: msg.role,
@@ -115,10 +218,11 @@ export const ChatLayout = React.memo(function ChatLayout({
     [messages]
   );
 
+
   // Memoized suggestion buttons with shadcn-friendly labels
   const suggestionButtons = useMemo(() => [
     "Start a conversation",
-    "Explain the architecture", 
+    "Explain the architecture",
     "Create a code example",
     "Generate an artifact"
   ], []);
@@ -139,7 +243,7 @@ export const ChatLayout = React.memo(function ChatLayout({
   ), [messages.length]);
 
   return (
-    <ChatLayoutContainer className={className}>
+    <ChatLayoutContainer className={cn("h-full", className)}>
       <ChatMain>
         <ChatContent>
           <ChatMessages>
@@ -174,13 +278,20 @@ export const ChatLayout = React.memo(function ChatLayout({
                   ))}
                 </ChatMessageList>
               )}
-              
+
+              {/* Show reasoning steps in agentic/planning modes */}
+              {(chatMode === 'agentic' || chatMode === 'planning') && reasoningSteps.length > 0 && (
+                <div className="px-4 py-2">
+                  <ReasoningStepsDisplay steps={reasoningSteps} />
+                </div>
+              )}
+
               {/* Optimized loading indicator */}
-              <MessageLoading 
-                isLoading={isLoading} 
+              <MessageLoading
+                isLoading={isLoading}
                 streamingMessage={streamingMessage || undefined}
               />
-              
+
               {/* Streaming message with shadcn shimmer */}
               {streamingMessage && (
                 <div className="flex justify-start">
@@ -210,6 +321,8 @@ export const ChatLayout = React.memo(function ChatLayout({
               setSelectedModel={setSelectedModel}
               onSubmit={handleSubmit}
               status={chatStatus}
+              chatMode={chatMode}
+              onChatModeChange={setChatMode}
             />
           </ChatInputContainer>
         </ChatContent>

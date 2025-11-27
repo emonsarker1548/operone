@@ -5,6 +5,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // Use single fork to minimize worker issues
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],

@@ -11,9 +11,11 @@ interface AuthContextType {
     user: User | null
     isLoading: boolean
     isAuthenticated: boolean
+    isNewLogin: boolean
     login: () => Promise<void>
     loginWithToken: (token: string) => Promise<void>
     logout: () => Promise<void>
+    clearNewLoginFlag: () => void
     error: string | null
 }
 
@@ -23,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [isNewLogin, setIsNewLogin] = useState(false)
     const validatingRef = useRef(false)
 
     // Check authentication status on mount
@@ -110,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (window.electronAPI) {
                 await window.electronAPI.setUser(userData, token)
                 setUser(userData)
+                setIsNewLogin(true) // Mark as fresh login
             }
         } catch (err) {
             console.error('Failed to validate token:', err)
@@ -133,11 +137,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (window.electronAPI) {
                     await window.electronAPI.setUser(data.user, data.token)
                     setUser(data.user)
+                    setIsNewLogin(true) // Mark as fresh login from existing session
                 }
                 return true
             }
         } catch (error) {
-            console.log('No existing web session found, proceeding with browser login')
+            // Silently handle - no existing session is expected behavior
+            // Only log if it's not a 401 or network error
+            if (error instanceof Error && !error.message.includes('401')) {
+                console.log('Session check failed:', error.message)
+            }
         }
         return false
     }
@@ -153,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             // First, try to check for existing web session
             const hasExistingSession = await checkExistingWebSession()
-            
+
             if (hasExistingSession) {
                 setIsLoading(false)
                 return
@@ -161,7 +170,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             // If no existing session, proceed with browser login
             await window.electronAPI.login()
-            // The actual authentication will happen via deep link callback
+            // Reset loading state after browser opens - the actual authentication will happen via deep link callback
+            setIsLoading(false)
         } catch (err) {
             console.error('Failed to initiate login:', err)
             setError(err instanceof Error ? err.message : 'Failed to start login')
@@ -186,15 +196,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
+    const clearNewLoginFlag = () => {
+        setIsNewLogin(false)
+    }
+
     return (
         <AuthContext.Provider
             value={{
                 user,
                 isLoading,
                 isAuthenticated: !!user,
+                isNewLogin,
                 login,
                 loginWithToken: validateAndSetUser,
                 logout,
+                clearNewLoginFlag,
                 error,
             }}
         >

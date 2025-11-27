@@ -1,7 +1,6 @@
 export { MemoryManager } from './memory/MemoryManager';
-export { VectorStore } from './rag/VectorStore';
-export { RAGEngine } from './rag/RAGEngine';
-export { ReasoningEngine } from './reasoning/ReasoningEngine';
-export { OSAgent } from './agents/OSAgent';
-export { AssistantAgent } from './agents/AssistantAgent';
 export { ModelProvider, ModelRegistry, ProviderManager, createDefaultConfig } from './model-provider';
+export { StreamHandler } from './streaming/StreamHandler';
+export type { StreamOptions } from './streaming/StreamHandler';
+export * from './core/StorageManager';
+export { EventBus } from './core/EventBus';

@@ -1,18 +1,19 @@
 import * as React from "react"
 import { useCallback, useMemo } from "react"
-import { Paperclip, Mic } from "lucide-react"
 
 import {
   PromptInput,
   PromptInputTextarea,
   PromptInputFooter,
   PromptInputTools,
-  PromptInputButton,
   PromptInputSubmit,
   PromptInputModelSelector,
   type ModelInfo,
   type ModelCategory,
 } from "@/components/ai/prompt-input"
+import { ChatModeDropdown, type ChatMode } from "@/components/ai/chat-mode-selector"
+import { PaperclipButton } from "@/components/ai/paperclip-button"
+import { MicButton } from "@/components/ai/mic-button"
 import { useModelDetector } from "@/contexts"
 import type { ChatStatus } from "ai"
 
@@ -24,6 +25,8 @@ interface ChatPromptInputProps {
   setSelectedModel: (value: string) => void;
   onSubmit: (message: { text: string; files: any[] }, event: React.FormEvent<HTMLFormElement>) => void;
   status: ChatStatus;
+  chatMode?: ChatMode;
+  onChatModeChange?: (mode: ChatMode) => void;
 }
 
 
@@ -35,6 +38,8 @@ export const ChatPromptInput = React.memo(function ChatPromptInput({
   setSelectedModel,
   onSubmit,
   status,
+  chatMode = 'chat',
+  onChatModeChange,
 }: ChatPromptInputProps) {
   const { availableModels } = useModelDetector();
 
@@ -96,13 +101,8 @@ export const ChatPromptInput = React.memo(function ChatPromptInput({
       />
       <PromptInputFooter>
         <PromptInputTools>
-          <PromptInputButton variant="ghost" size="sm">
-            <Paperclip className="h-4 w-4" />
-          </PromptInputButton>
-          <PromptInputButton variant="ghost" size="sm">
-            <Mic className="h-4 w-4" />
-            <span className="sr-only">Voice input</span>
-          </PromptInputButton>
+          <PaperclipButton size="sm" />
+          <MicButton size="sm" />
           <PromptInputModelSelector
             models={transformedModels}
             selectedModel={selectedModel}
@@ -110,9 +110,18 @@ export const ChatPromptInput = React.memo(function ChatPromptInput({
             maxContentHeight="200px"
             maxContentWidth="200px"
             showCategories={true}
-            allowSorting={true}
             className="min-w-[120px]"
           />
+          {onChatModeChange && (
+            <ChatModeDropdown
+              mode={chatMode}
+              onModeChange={onChatModeChange}
+              placeholder="Mode"
+              maxContentHeight="200px"
+              maxContentWidth="160px"
+              className="min-w-[80px]"
+            />
+          )}
         </PromptInputTools>
         <PromptInputSubmit disabled={!input.trim()} status={status} />
       </PromptInputFooter>

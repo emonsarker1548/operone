@@ -11,7 +11,7 @@ export interface ChatLayoutProps {
 }
 
 export const ChatLayout = ({ children, className }: ChatLayoutProps) => (
-  <div className={cn("flex flex-col h-screen overflow-hidden bg-background", className)}>
+  <div className={cn("flex flex-col h-full overflow-hidden bg-background", className)}>
     {children}
   </div>
 );
@@ -85,12 +85,12 @@ export interface ChatEmptyStateProps {
   className?: string;
 }
 
-export const ChatEmptyState = ({ 
+export const ChatEmptyState = ({
   title = "Start a conversation",
   description = "Ask me anything! I'm here to help with your questions and tasks.",
   icon,
   actions,
-  className 
+  className
 }: ChatEmptyStateProps) => (
   <div className={cn("flex flex-col items-center justify-center py-6 px-2 text-center", className)}>
     {icon && (

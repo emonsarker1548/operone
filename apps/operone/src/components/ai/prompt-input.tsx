@@ -156,7 +156,7 @@ export function PromptInputProvider({
     (FileUIPart & { id: string })[]
   >([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const openRef = useRef<() => void>(() => {});
+  const openRef = useRef<() => void>(() => { });
 
   const add = useCallback((files: File[] | FileList) => {
     const incoming = Array.from(files);
@@ -556,25 +556,25 @@ export const PromptInput = ({
   const remove = usingProvider
     ? (id: string) => controller.attachments.remove(id)
     : (id: string) =>
-        setItems((prev) => {
-          const found = prev.find((file) => file.id === id);
-          if (found?.url) {
-            URL.revokeObjectURL(found.url);
-          }
-          return prev.filter((file) => file.id !== id);
-        });
+      setItems((prev) => {
+        const found = prev.find((file) => file.id === id);
+        if (found?.url) {
+          URL.revokeObjectURL(found.url);
+        }
+        return prev.filter((file) => file.id !== id);
+      });
 
   const clear = usingProvider
     ? () => controller.attachments.clear()
     : () =>
-        setItems((prev) => {
-          for (const file of prev) {
-            if (file.url) {
-              URL.revokeObjectURL(file.url);
-            }
+      setItems((prev) => {
+        for (const file of prev) {
+          if (file.url) {
+            URL.revokeObjectURL(file.url);
           }
-          return [];
-        });
+        }
+        return [];
+      });
 
   const openFileDialog = usingProvider
     ? () => controller.attachments.openFileDialog()
@@ -691,9 +691,9 @@ export const PromptInput = ({
     const text = usingProvider
       ? controller.textInput.value
       : (() => {
-          const formData = new FormData(form);
-          return (formData.get("message") as string) || "";
-        })();
+        const formData = new FormData(form);
+        return (formData.get("message") as string) || "";
+      })();
 
     // Reset form immediately after capturing text to avoid race condition
     // where user input during async blob conversion would be lost
@@ -859,15 +859,15 @@ export const PromptInputTextarea = ({
 
   const controlledProps = controller
     ? {
-        value: controller.textInput.value,
-        onChange: (e: ChangeEvent<HTMLTextAreaElement>) => {
-          controller.textInput.setInput(e.currentTarget.value);
-          onChange?.(e);
-        },
-      }
+      value: controller.textInput.value,
+      onChange: (e: ChangeEvent<HTMLTextAreaElement>) => {
+        controller.textInput.setInput(e.currentTarget.value);
+        onChange?.(e);
+      },
+    }
     : {
-        onChange,
-      };
+      onChange,
+    };
 
   return (
     <InputGroupTextarea
@@ -975,13 +975,13 @@ export const PromptInputActionMenuContent = ({
   className,
   ...props
 }: PromptInputActionMenuContentProps) => (
-  <DropdownMenuContent 
-    align="start" 
+  <DropdownMenuContent
+    align="start"
     className={cn(
       "border-0 shadow-lg rounded-xl bg-muted/95 backdrop-blur-sm p-1 min-w-[200px] focus:outline-none focus:ring-0",
       className
-    )} 
-    {...props} 
+    )}
+    {...props}
   />
 );
 
@@ -992,12 +992,12 @@ export const PromptInputActionMenuItem = ({
   className,
   ...props
 }: PromptInputActionMenuItemProps) => (
-  <DropdownMenuItem 
+  <DropdownMenuItem
     className={cn(
       "border-0 rounded-lg cursor-pointer transition-all duration-200 hover:bg-accent/50 focus:bg-accent/50 px-3 py-2 text-sm",
       className
-    )} 
-    {...props} 
+    )}
+    {...props}
   />
 );
 
@@ -1024,7 +1024,7 @@ export const PromptInputSubmit = ({
     Icon = <SquareIcon className="size-6" />;
   } else if (status === "error") {
     Icon = <XIcon className="size-6" />;
-  } 
+  }
 
   return (
     <InputGroupButton
@@ -1049,11 +1049,11 @@ interface SpeechRecognition extends EventTarget {
   onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
   onend: ((this: SpeechRecognition, ev: Event) => any) | null;
   onresult:
-    | ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any)
-    | null;
+  | ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any)
+  | null;
   onerror:
-    | ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any)
-    | null;
+  | ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any)
+  | null;
 }
 
 interface SpeechRecognitionEvent extends Event {
@@ -1086,10 +1086,10 @@ interface SpeechRecognitionErrorEvent extends Event {
 declare global {
   interface Window {
     SpeechRecognition: {
-      new (): SpeechRecognition;
+      new(): SpeechRecognition;
     };
     webkitSpeechRecognition: {
-      new (): SpeechRecognition;
+      new(): SpeechRecognition;
     };
   }
 }
@@ -1139,7 +1139,7 @@ export const PromptInputSpeechButton = ({
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
-          if (result.isFinal) {
+          if (result?.isFinal && result[0]) {
             finalTranscript += result[0]?.transcript ?? "";
           }
         }
@@ -1426,7 +1426,8 @@ export type PromptInputModelSelectorProps = {
   maxContentHeight?: string;
   maxContentWidth?: string;
   showCategories?: boolean;
-  allowSorting?: boolean;
+  showBrainIcon?: boolean;
+  shouldShowBrainIcon?: (model: ModelInfo) => boolean;
 };
 
 export const PromptInputModelSelector = ({
@@ -1438,48 +1439,10 @@ export const PromptInputModelSelector = ({
   maxContentHeight = "400px",
   maxContentWidth = "320px",
   showCategories = true,
-  allowSorting = true,
+  showBrainIcon = true,
+  shouldShowBrainIcon = (model) => model.name.toLowerCase().includes('thinking'),
 }: PromptInputModelSelectorProps) => {
-  // Group models by category
-  const modelsByCategory = useMemo(() => {
-    const grouped: Record<ModelCategory, ModelInfo[]> = {
-      text: [],
-      code: [],
-      image: [],
-      audio: [],
-      video: [],
-      multimodal: [],
-    };
-    
-    models.forEach(model => {
-      grouped[model.category].push(model);
-    });
-    
-    // Sort models within each category if enabled
-    if (allowSorting) {
-      Object.keys(grouped).forEach(category => {
-        grouped[category as ModelCategory].sort((a, b) => {
-          // Prioritize premium models, then new models, then alphabetically
-          if (a.isPremium !== b.isPremium) return b.isPremium ? 1 : -1;
-          if (a.isNew !== b.isNew) return b.isNew ? 1 : -1;
-          return a.name.localeCompare(b.name);
-        });
-      });
-    }
-    
-    return grouped;
-  }, [models, allowSorting]);
-
   const selectedModelInfo = models.find(m => m.id === selectedModel);
-
-  const categoryLabels: Record<ModelCategory, string> = {
-    text: "Text Generation",
-    code: "Code Generation", 
-    image: "Image Generation",
-    audio: "Audio Processing",
-    video: "Video Processing",
-    multimodal: "Multimodal"
-  };
 
   return (
     <Select value={selectedModel} onValueChange={onModelChange}>
@@ -1487,28 +1450,22 @@ export const PromptInputModelSelector = ({
         <div className="flex items-center gap-1 min-w-0 flex-1">
           {selectedModelInfo && (
             <>
-              <span className="text-xs">
+              {showBrainIcon && shouldShowBrainIcon(selectedModelInfo) && (
                 <BrainIcon className="size-3" />
-              </span>
+              )}
               <span className="truncate text-xs font-medium">
-                {selectedModelInfo.name.replace(/^.*?\s-\s/, '')}
+                {selectedModelInfo.name}
               </span>
-              {selectedModelInfo.isPremium && (
-                <span className="text-xs text-yellow-500">⭐</span>
-              )}
-              {selectedModelInfo.isNew && (
-                <span className="text-xs text-green-500">NEW</span>
-              )}
             </>
           )}
           {!selectedModelInfo && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <BrainIcon className="size-3" /> {placeholder}
+              {showBrainIcon && <BrainIcon className="size-3" />} {placeholder}
             </span>
           )}
         </div>
       </PromptInputSelectTrigger>
-      <PromptInputSelectContent 
+      <PromptInputSelectContent
         className={cn(
           "border-0 shadow-lg rounded-xl bg-background/95 backdrop-blur-sm p-0.5",
           "max-h-[var(--radix-select-content-trigger-height)]",
@@ -1521,80 +1478,60 @@ export const PromptInputModelSelector = ({
       >
         <div className="max-h-full overflow-y-auto">
           {showCategories ? (
-            // Render grouped by categories
-            Object.entries(modelsByCategory).map(([category, categoryModels]) => {
-              if (categoryModels.length === 0) return null;
-              
-              return (
-                <div key={category} className="mb-2">
-                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border/50">
-                    <span className="flex items-center gap-1">
-                      {categoryLabels[category as ModelCategory]}
-                      <span className="text-muted-foreground/60">({categoryModels.length})</span>
-                    </span>
+            // Group by provider instead of category
+            (() => {
+              const modelsByProvider: Record<string, ModelInfo[]> = {};
+              models.forEach(model => {
+                const provider = model.provider || 'Other';
+                if (!modelsByProvider[provider]) {
+                  modelsByProvider[provider] = [];
+                }
+                modelsByProvider[provider].push(model);
+              });
+
+              return Object.entries(modelsByProvider).map(([provider, providerModels]) => {
+                if (providerModels.length === 0) return null;
+
+                return (
+                  <div key={provider} className="mb-2">
+                    <div className="px-2 py-1 text-xs font-medium text-muted-foreground/80 sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border/50">
+                      <span className="flex items-center gap-0.5">
+                        {provider.charAt(0).toUpperCase() + provider.slice(1).toLowerCase()}
+                        <span className="text-muted-foreground/60 text-[10px]">({providerModels.length})</span>
+                      </span>
+                    </div>
+                    {providerModels.map(model => (
+                      <PromptInputSelectItem
+                        key={model.id}
+                        value={model.id}
+                        className="pl-5 pr-2 py-1.5 cursor-pointer transition-all duration-200 hover:bg-accent/50 focus:bg-accent/50 border-0"
+                      >
+                        <div className="flex items-center gap-1 w-full">
+                          {showBrainIcon && shouldShowBrainIcon(model) && (
+                            <BrainIcon className="size-3 flex-shrink-0" />
+                          )}
+                          <span className="text-xs truncate flex-1">{model.name}</span>
+                        </div>
+                      </PromptInputSelectItem>
+                    ))}
                   </div>
-                  {categoryModels.map(model => (
-                    <PromptInputSelectItem 
-                      key={model.id} 
-                      value={model.id}
-                      className="pl-5 pr-2 py-1 cursor-pointer transition-all duration-200 hover:bg-accent/50 focus:bg-accent/50 border-0"
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-1 min-w-0 flex-1">
-                          <span className="text-xs">🧠</span>
-                          <span className="text-xs truncate">{model.name.replace(/^.*?\s-\s/, '')}</span>
-                          {model.isPremium && (
-                            <span className="text-xs text-yellow-500 flex-shrink-0">⭐</span>
-                          )}
-                          {model.isNew && (
-                            <span className="text-xs text-green-500 flex-shrink-0">NEW</span>
-                          )}
-                        </div>
-                        {model.provider && (
-                          <span className="text-xs text-muted-foreground/70 flex-shrink-0">
-                            {model.provider}
-                          </span>
-                        )}
-                      </div>
-                      {model.description && (
-                        <div className="text-xs text-muted-foreground/70 mt-0 truncate">
-                          {model.description}
-                        </div>
-                      )}
-                    </PromptInputSelectItem>
-                  ))}
-                </div>
-              );
-            })
+                );
+              });
+            })()
           ) : (
-            // Render flat list without categories
+            // Render flat list without grouping
             models.map(model => (
-              <PromptInputSelectItem 
-                key={model.id} 
+              <PromptInputSelectItem
+                key={model.id}
                 value={model.id}
-                className="px-2 py-1 cursor-pointer transition-all duration-200 hover:bg-accent/50 focus:bg-accent/50 border-0"
+                className="px-2 py-1.5 cursor-pointer transition-all duration-200 hover:bg-accent/50 focus:bg-accent/50 border-0"
               >
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-1 min-w-0 flex-1">
-                    <span className="text-xs truncate">{model.name}</span>
-                    {model.isPremium && (
-                      <span className="text-xs text-yellow-500 flex-shrink-0">⭐</span>
-                    )}
-                    {model.isNew && (
-                      <span className="text-xs text-green-500 flex-shrink-0">NEW</span>
-                    )}
-                  </div>
-                  {model.provider && (
-                    <span className="text-xs text-muted-foreground/70 flex-shrink-0">
-                      {model.provider}
-                    </span>
+                <div className="flex items-center gap-1 w-full">
+                  {showBrainIcon && shouldShowBrainIcon(model) && (
+                    <BrainIcon className="size-3 flex-shrink-0" />
                   )}
+                  <span className="text-xs truncate flex-1">{model.name}</span>
                 </div>
-                {model.description && (
-                  <div className="text-xs text-muted-foreground/70 mt-0 truncate">
-                    {model.description}
-                  </div>
-                )}
               </PromptInputSelectItem>
             ))
           )}
