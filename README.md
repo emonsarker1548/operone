@@ -418,5 +418,5 @@ MIT License - see [LICENSE](LICENSE) file for details.
 **Built with ❤️ by the Operone team**
 
 
-https://www.canva.com/design/DAG50gnYUlE/SFKyfgCvaUYKEqB4GC1GHA/edit?utm_content=DAG50gnYUlE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+
 
