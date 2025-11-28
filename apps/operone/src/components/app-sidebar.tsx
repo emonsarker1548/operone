@@ -292,7 +292,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <SidebarMenu>
                       {categoryChats.map((chat) => (
                         <SidebarMenuItem key={chat.id}>
-                          <div className="flex items-center justify-between w-full group hover:bg-muted rounded-md transition-colors duration-200 px-2">
+                          <div className={cn(
+                            "flex items-center justify-between w-full group hover:bg-muted rounded-md transition-colors duration-200 px-2",
+                            currentChat?.id === chat.id && "bg-muted"
+                          )}>
                             <SidebarMenuButton
                               asChild
                               className={cn(
@@ -310,7 +313,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 <span className="truncate group-data-[collapsible=icon]:hidden">{truncateText(chat.title, 20)}</span>
                               </button>
                             </SidebarMenuButton>
-                            <div className="flex items-center gap-1 group-data-[collapsible=icon]:hidden opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <div className={cn(
+                              "flex items-center gap-1 group-data-[collapsible=icon]:hidden transition-opacity duration-200",
+                              currentChat?.id === chat.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                            )}>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
