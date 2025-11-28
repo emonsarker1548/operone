@@ -27,6 +27,7 @@ interface ChatPromptInputProps {
   status: ChatStatus;
   chatMode?: ChatMode;
   onChatModeChange?: (mode: ChatMode) => void;
+  onFocus?: () => void;
 }
 
 
@@ -40,6 +41,7 @@ export const ChatPromptInput = React.memo(function ChatPromptInput({
   status,
   chatMode = 'chat',
   onChatModeChange,
+  onFocus,
 }: ChatPromptInputProps) {
   const { availableModels } = useModelDetector();
 
@@ -95,6 +97,7 @@ export const ChatPromptInput = React.memo(function ChatPromptInput({
       <PromptInputTextarea
         value={input}
         onChange={handleInputChange}
+        onFocus={onFocus}
         placeholder="Type your message..."
         className="resize-none"
         rows={1}

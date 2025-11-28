@@ -1,0 +1,35 @@
+{
+    "name": "@operone/shared",
+    "version": "0.1.0",
+    "description": "Shared utilities and types for Operone",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test": "vitest run",
+        "lint": "eslint src/",
+        "check-types": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@repo/types": "workspace:*",
+        "pino": "^8.17.2",
+        "dotenv": "^16.3.1",
+        "zod": "^3.23.8",
+        "systeminformation": "^5.21.20"
+    },
+    "devDependencies": {
+        "@repo/eslint-config": "workspace:*",
+        "@types/node": "^20.10.0",
+        "typescript": "5.9.3",
+        "vitest": "^2.1.8"
+    },
+    "keywords": [
+        "operone",
+        "utilities",
+        "logging",
+        "config"
+    ],
+    "author": "Operone Team",
+    "license": "MIT"
+}

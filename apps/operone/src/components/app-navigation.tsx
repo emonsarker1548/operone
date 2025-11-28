@@ -4,6 +4,7 @@ import {
   SquarePlus,
   Search,
   Library,
+  Settings,
 } from "lucide-react"
 
 // Common navigation items for all roles
@@ -37,10 +38,15 @@ export const quickActions = [
     url: "/library",
     icon: Library,
   },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+  },
 ]
 
 // Utility function for truncating text
 export const truncateText = (text: string, maxLength: number) => {
   if (text.length <= maxLength) return text
   return text.substring(0, maxLength) + '...'
-} 
+}

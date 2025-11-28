@@ -6,23 +6,59 @@ import { Select } from '@/components'
 import { Label } from '@/components'
 import { Badge } from '@/components'
 import { Alert, AlertDescription } from '@/components'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAI } from '@/contexts/ai-context'
 import type { ProviderConfig, ProviderType, ModelInfo } from '@repo/types'
-import { OllamaDetector } from '@/utils/ollama-detector'
+import { BrowserAdapter } from '@repo/operone'
+import { Search } from 'lucide-react'
+import { SystemStatus } from '@/components/SystemStatus'
 
-export function SettingsPanel() {
+const { OllamaDetector } = BrowserAdapter;
+
+export function UnifiedSettings() {
+    return (
+        <div className="p-6 max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4">
+            <div>
+                <h2 className="text-2xl font-semibold tracking-tight">Settings</h2>
+                <p className="text-muted-foreground">Manage your AI providers and system settings</p>
+            </div>
+
+            <Tabs defaultValue="ai" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="ai">AI Settings</TabsTrigger>
+                    <TabsTrigger value="memory">Memory</TabsTrigger>
+                    <TabsTrigger value="system">System</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="ai" className="space-y-6">
+                    <AISettingsTab />
+                </TabsContent>
+
+                <TabsContent value="memory" className="space-y-6">
+                    <MemoryTab />
+                </TabsContent>
+
+                <TabsContent value="system" className="space-y-6">
+                    <SystemTab />
+                </TabsContent>
+            </Tabs>
+        </div>
+    )
+}
+
+function AISettingsTab() {
     const { activeProvider, allProviders, setActiveProvider, addProvider, removeProvider, testProvider, getAvailableModels } = useAI()
     const [isSaved, setIsSaved] = useState(false)
     const [isTesting, setIsTesting] = useState(false)
     const [testResult, setTestResult] = useState<{ success: boolean; error?: string } | null>(null)
-    
+
     // Ollama detection state
     const [ollamaDetector] = useState(() => OllamaDetector.getInstance())
     const [isDetectingOllama, setIsDetectingOllama] = useState(false)
     const [ollamaAvailable, setOllamaAvailable] = useState(false)
     const [ollamaInfo, setOllamaInfo] = useState<any>(null)
     const [detectedOllamaModels, setDetectedOllamaModels] = useState<any[]>([])
-    
+
     // Form state
     const [providerType, setProviderType] = useState<ProviderType>('openai')
     const [providerName, setProviderName] = useState('')
@@ -41,11 +77,11 @@ export function SettingsPanel() {
         try {
             const available = await ollamaDetector.checkAvailability()
             setOllamaAvailable(available)
-            
+
             if (available) {
                 const info = await ollamaDetector.getInfo()
                 setOllamaInfo(info)
-                
+
                 const models = await ollamaDetector.getAvailableModels()
                 setDetectedOllamaModels(models)
             }
@@ -72,7 +108,7 @@ export function SettingsPanel() {
     const handleAddProvider = async () => {
         if (!providerName || !apiKey || !selectedModel) return
 
-        const config: ProviderConfig = providerType === 'custom' 
+        const config: ProviderConfig = providerType === 'custom'
             ? { type: 'custom' as const, model: selectedModel, apiKey, baseURL: baseURL || '' } as ProviderConfig
             : { type: providerType, model: selectedModel, apiKey, ...(baseURL && { baseURL }) } as ProviderConfig;
 
@@ -80,13 +116,13 @@ export function SettingsPanel() {
             await addProvider(providerName, config)
             setIsSaved(true)
             setTimeout(() => setIsSaved(false), 2000)
-            
+
             // Reset form
             setProviderName('')
             setApiKey('')
             setBaseURL('')
             setSelectedModel('')
-            
+
             // Show success message
             alert('Provider added successfully! You can now go back to chat and start using AI.')
         } catch (error) {
@@ -97,7 +133,7 @@ export function SettingsPanel() {
     const handleTestProvider = async (providerId: string) => {
         setIsTesting(true)
         setTestResult(null)
-        
+
         try {
             const result = await testProvider(providerId)
             setTestResult(result)
@@ -140,12 +176,7 @@ export function SettingsPanel() {
     }
 
     return (
-        <div className="p-6 max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4">
-            <div>
-                <h2 className="text-2xl font-semibold tracking-tight">AI Settings</h2>
-                <p className="text-muted-foreground">Configure your AI providers and models</p>
-            </div>
-
+        <>
             {/* Ollama Detection Status */}
             <Card className="p-6 space-y-4">
                 <div>
@@ -169,10 +200,10 @@ export function SettingsPanel() {
                             <Badge variant="destructive">Not Available</Badge>
                         )}
                     </div>
-                    
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
+
+                    <Button
+                        variant="outline"
+                        size="sm"
                         onClick={detectOllama}
                         disabled={isDetectingOllama}
                     >
@@ -319,7 +350,7 @@ export function SettingsPanel() {
                                         <Badge variant="default">Active</Badge>
                                     )}
                                 </div>
-                                
+
                                 <div className="flex items-center gap-2">
                                     <Button
                                         variant="outline"
@@ -329,7 +360,7 @@ export function SettingsPanel() {
                                     >
                                         {isTesting ? 'Testing...' : 'Test'}
                                     </Button>
-                                    
+
                                     {(!activeProvider || activeProvider.type !== config.type || activeProvider.model !== config.model) && (
                                         <Button
                                             variant="outline"
@@ -339,7 +370,7 @@ export function SettingsPanel() {
                                             Set Active
                                         </Button>
                                     )}
-                                    
+
                                     <Button
                                         variant="destructive"
                                         size="sm"
@@ -362,6 +393,52 @@ export function SettingsPanel() {
                     </AlertDescription>
                 </Alert>
             )}
-        </div>
+        </>
     )
+}
+
+function MemoryTab() {
+    const [stats, setStats] = useState({ vectorDocuments: 0, shortTermMemory: 0 })
+    const [query, setQuery] = useState('')
+
+    useEffect(() => {
+        // Load stats
+        // window.electron?.getStats().then(setStats)
+        setStats({ vectorDocuments: 12, shortTermMemory: 5 })
+    }, [])
+
+    return (
+        <>
+            <div className="grid grid-cols-2 gap-4">
+                <Card className="p-6">
+                    <h3 className="text-sm font-medium text-muted-foreground">Vector Documents</h3>
+                    <p className="text-3xl font-bold mt-2">{stats.vectorDocuments}</p>
+                </Card>
+                <Card className="p-6">
+                    <h3 className="text-sm font-medium text-muted-foreground">Short-term Items</h3>
+                    <p className="text-3xl font-bold mt-2">{stats.shortTermMemory}</p>
+                </Card>
+            </div>
+
+            <div className="space-y-4">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Search memory..."
+                        className="pl-9"
+                    />
+                </div>
+
+                <div className="text-center py-12 text-muted-foreground">
+                    No memory items found matching your query.
+                </div>
+            </div>
+        </>
+    )
+}
+
+function SystemTab() {
+    return <SystemStatus />
 }

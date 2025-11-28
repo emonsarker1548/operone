@@ -1,5 +1,5 @@
-import { Worker } from 'worker_threads';
-import * as path from 'path';
+import type { Worker } from 'worker_threads';
+
 import { EventBus } from './EventBus';
 
 interface WorkerTask {
@@ -21,22 +21,33 @@ export class WorkerPool {
   constructor(maxWorkers: number = 4, workerScriptPath?: string) {
     this.maxWorkers = maxWorkers;
     this.eventBus = EventBus.getInstance();
-    // Default to a worker entry point. In a real app, this needs to point to the compiled JS worker file.
     // For TS execution in dev, we might need a loader or point to the .ts file with ts-node/tsx.
-    this.workerScript = workerScriptPath || path.join(__dirname, '../worker/agent-worker.js');
+    const defaultWorkerPath = typeof __dirname !== 'undefined' 
+      ? `${__dirname}/../worker/agent-worker.js` 
+      : '../worker/agent-worker.js';
+    this.workerScript = workerScriptPath || defaultWorkerPath;
     this.initialize();
   }
 
-  private initialize() {
+  private async initialize() {
+    // Check if running in Node.js environment
+    if (typeof process === 'undefined' || (process as any).type === 'renderer' || (process as any).browser) {
+      console.warn('[WorkerPool] Skipping worker initialization in browser environment');
+      return;
+    }
+
     for (let i = 0; i < this.maxWorkers; i++) {
-      this.spawnWorker(i);
+      await this.spawnWorker(i);
     }
   }
 
-  private spawnWorker(index: number) {
+  private async spawnWorker(index: number) {
     // In a real production build, ensure this path resolves to the built worker file
     // For now, we'll assume the worker script exists or will be created.
     try {
+        // Dynamic import to avoid bundling worker_threads in browser
+        const { Worker } = await import('worker_threads');
+        
         const worker = new Worker(this.workerScript, {
             workerData: { workerId: index }
         });

@@ -4,9 +4,10 @@ import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAI } from "@/contexts/ai-context";
+import { useChat } from "@/contexts/chat-context";
 import { useModelDetector } from "@/contexts/model-context";
-import type { FileUIPart, ChatStatus } from "ai";
-import type { ChatMessage, Chat } from "@repo/types";
+import type { ChatStatus } from "ai";
+import type { Chat } from "@repo/types";
 
 // AI Component Imports
 import { ChatPromptInput } from "./prompt-input";
@@ -44,41 +45,29 @@ export const ChatLayout = React.memo(function ChatLayout({
     setMessages
   } = useAI();
 
-  // Simple local state for chat management (replacing project context)
-  const [currentChat, setCurrentChat] = useState<Chat | null>(null);
-  const [chats, setChats] = useState<Chat[]>([]);
-
-  const updateChat = useCallback((chatId: string, updates: Partial<Chat>) => {
-    setChats(prev => prev.map(chat => 
-      chat.id === chatId ? { ...chat, ...updates } : chat
-    ));
-    if (currentChat?.id === chatId) {
-      setCurrentChat(prev => prev ? { ...prev, ...updates } : null);
-    }
-  }, [currentChat]);
-
-  const getChatById = useCallback((chatId: string) => {
-    return chats.find(chat => chat.id === chatId);
-  }, [chats]);
-
-  const generateChatTitle = useCallback((chatId: string, messages: ChatMessage[]) => {
-    // Simple title generation - take first message content and truncate
-    const firstMessage = messages.find(m => m.role === 'user');
-    if (firstMessage && firstMessage.content) {
-      const title = firstMessage.content.slice(0, 30) + (firstMessage.content.length > 30 ? '...' : '');
-      updateChat(chatId, { title });
-    }
-  }, [updateChat]);
+  // Use unified chat context
+  const {
+    currentChat,
+    updateChat,
+    generateChatTitle,
+    getChatById,
+    setCurrentChat,
+    updateChatMessages
+  } = useChat();
 
   const [input, setInput] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [chatStatus, setChatStatus] = useState<ChatStatus>("ready");
   const [chatMode, setChatMode] = useState<ChatMode>("chat");
   const [reasoningSteps, setReasoningSteps] = useState<ReasoningStep[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [searchParams] = useSearchParams();
+  const skipNextSyncRef = useRef(false);
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
+  const userInteractionTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
-  // Load chat from URL params or use current chat
+  // Load chat from URL params or use current chat (optimized)
   useEffect(() => {
     const chatId = searchParams.get('chatId');
 
@@ -86,34 +75,77 @@ export const ChatLayout = React.memo(function ChatLayout({
       const chat = getChatById(chatId);
       if (chat) {
         setCurrentChat(chat);
-        // Ensure messages have required timestamp property
+        // Load messages from chat and skip next sync to prevent double update
         const messagesWithTimestamp = (chat.messages || []).map(msg => ({
           ...msg,
           timestamp: msg.timestamp || new Date()
         }));
         setMessages(messagesWithTimestamp);
+        skipNextSyncRef.current = true;
       }
-    } else if (currentChat) {
-      // Ensure messages have required timestamp property
+    } else if (!chatId && currentChat) {
+      // Load messages from current chat and skip next sync
       const messagesWithTimestamp = (currentChat.messages || []).map(msg => ({
         ...msg,
         timestamp: msg.timestamp || new Date()
       }));
       setMessages(messagesWithTimestamp);
+      skipNextSyncRef.current = true;
     }
-  }, [searchParams, currentChat?.id, getChatById, setMessages]);
+  }, [searchParams, currentChat?.id, getChatById, setCurrentChat, setMessages]);
 
   // Optimized auto-scroll with useCallback
-  const scrollToBottom = useCallback(() => {
-    if (scrollRef.current) {
+  const scrollToBottom = useCallback((force = false) => {
+    if (scrollRef.current && (!isUserInteracting || force)) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, []);
+  }, [isUserInteracting]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading, streamingMessage, scrollToBottom]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Clear any ongoing operations
+      setError(null);
+      setChatStatus("ready");
+      setReasoningSteps([]);
+      if (userInteractionTimeoutRef.current) {
+        clearTimeout(userInteractionTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Handle user interaction with scroll area
+  const handleUserScroll = useCallback(() => {
+    setIsUserInteracting(true);
+    
+    // Clear existing timeout
+    if (userInteractionTimeoutRef.current) {
+      clearTimeout(userInteractionTimeoutRef.current);
+    }
+    
+    // Reset user interaction state after 3 seconds of inactivity
+    userInteractionTimeoutRef.current = setTimeout(() => {
+      setIsUserInteracting(false);
+    }, 3000);
+  }, []);
+
+  // Handle input focus to prevent auto-scroll
+  const handleInputFocus = useCallback(() => {
+    setIsUserInteracting(true);
+    
+    if (userInteractionTimeoutRef.current) {
+      clearTimeout(userInteractionTimeoutRef.current);
+    }
+    
+    userInteractionTimeoutRef.current = setTimeout(() => {
+      setIsUserInteracting(false);
+    }, 3000);
+  }, []);
 
   // Generate chat title when messages are available and chat doesn't have a proper title
   useEffect(() => {
@@ -140,20 +172,25 @@ export const ChatLayout = React.memo(function ChatLayout({
     }
   }, [selectedModel, availableModels]);
 
-  // Update chat messages in project context
+  // Update chat messages in project context (debounced with cleanup)
   useEffect(() => {
-    if (currentChat && messages.length > 0) {
+    if (!currentChat || messages.length === 0) return;
+
+    const timeoutId = setTimeout(() => {
       updateChat(currentChat.id, {
         messages: messages,
         updatedAt: new Date()
       });
-    }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
   }, [messages, currentChat, updateChat]);
 
-  // Update chat status based on loading state
+  // Update chat status based on loading state with error handling
   useEffect(() => {
     if (isLoading) {
       setChatStatus("submitted");
+      setError(null); // Clear previous errors
     } else if (streamingMessage) {
       setChatStatus("streaming");
     } else {
@@ -161,7 +198,7 @@ export const ChatLayout = React.memo(function ChatLayout({
     }
   }, [isLoading, streamingMessage]);
 
-  // Listen for agent events to populate reasoning steps
+  // Listen for agent events to populate reasoning steps (with proper cleanup)
   useEffect(() => {
     if (!window.electronAPI?.ai?.onAgentEvent) return;
     if (chatMode === 'chat') return; // Only listen in agentic/planning modes
@@ -184,7 +221,9 @@ export const ChatLayout = React.memo(function ChatLayout({
       }
     });
 
-    return cleanup;
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, [chatMode]);
 
   // Clear reasoning steps when starting new message
@@ -194,19 +233,78 @@ export const ChatLayout = React.memo(function ChatLayout({
     }
   }, [isLoading, chatMode]);
 
+  // Sync messages to current chat whenever they change (optimized)
+  const isUpdatingRef = useRef(false);
+  const lastMessagesRef = useRef<string>("");
+
+  useEffect(() => {
+    // Prevent infinite loops and unnecessary updates
+    if (isUpdatingRef.current || !currentChat || messages.length === 0) {
+      return;
+    }
+
+    // Skip sync if we just loaded messages from chat (prevents double sync)
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false;
+      return;
+    }
+
+    // Create a unique identifier for current messages to detect actual changes
+    const currentMessagesId = messages.map(m => m.id || `${m.content}-${m.timestamp}`).join('|');
+
+    // Only proceed if messages actually changed
+    if (currentMessagesId === lastMessagesRef.current) {
+      return;
+    }
+
+    // Check if messages are different from what's in the chat
+    const chatMessages = currentChat.messages || [];
+    const messagesChanged = messages.length !== chatMessages.length ||
+      messages.some((msg, idx) => {
+        const chatMsg = chatMessages[idx];
+        return msg.id !== chatMsg?.id || msg.content !== chatMsg?.content;
+      });
+
+    if (messagesChanged) {
+      isUpdatingRef.current = true;
+      lastMessagesRef.current = currentMessagesId;
+
+      // Update chat messages
+      updateChatMessages(currentChat.id, messages);
+
+      // Auto-generate title from first user message if still "New Chat"
+      if (currentChat.title === 'New Chat' && messages.length >= 1) {
+        generateChatTitle(currentChat.id, messages);
+      }
+
+      // Reset flag after a short delay to allow state to settle
+      setTimeout(() => {
+        isUpdatingRef.current = false;
+      }, 50);
+    }
+  }, [messages, currentChat?.id, currentChat?.messages, updateChatMessages, generateChatTitle]);
+
   // Memoized submit handler with proper error handling
-  const handleSubmit = useCallback(async (message: { text: string; files: FileUIPart[] }) => {
+  const handleSubmit = useCallback(async (message: { text: string; files: any[] }) => {
     if (!message.text.trim()) return;
 
     setInput("");
+    setError(null);
+    
+    // Force scroll to bottom when submitting
+    setTimeout(() => {
+      scrollToBottom(true);
+    }, 100);
 
     try {
       await sendMessageStreaming(message.text);
     } catch (error) {
       console.error("Failed to send message:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to send message";
+      setError(errorMessage);
       setChatStatus("error");
     }
-  }, [sendMessageStreaming]);
+  }, [sendMessageStreaming, scrollToBottom]);
 
   // Memoized transformed messages with proper typing
   const transformedMessages = useMemo(() =>
@@ -230,12 +328,34 @@ export const ChatLayout = React.memo(function ChatLayout({
   // Memoized suggestion click handler
   const handleSuggestionClick = useCallback((suggestion: string) => {
     setInput(suggestion);
+    setError(null); // Clear error when user selects suggestion
   }, []);
 
-  // Memoized status display with shadcn styling patterns
-  const statusDisplay = useMemo(() => {
-    return null;
+  // Memoized retry handler
+  const handleRetry = useCallback(() => {
+    setError(null);
+    setChatStatus("ready");
   }, []);
+
+  // Memoized status display with error handling and retry
+  const statusDisplay = useMemo(() => {
+    if (error) {
+      return (
+        <div className="flex items-center gap-2 text-sm text-destructive">
+          <span>Error: {error}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRetry}
+            className="h-auto p-1 text-xs"
+          >
+            Retry
+          </Button>
+        </div>
+      );
+    }
+    return null;
+  }, [error, handleRetry]);
 
   // Memoized message count display with shadcn typography
   const messageCountDisplay = useMemo(() => (
@@ -246,7 +366,7 @@ export const ChatLayout = React.memo(function ChatLayout({
     <ChatLayoutContainer className={cn("h-full", className)}>
       <ChatMain>
         <ChatContent>
-          <ChatMessages>
+          <ChatMessages onScroll={handleUserScroll}>
             <ChatMessagesContainer>
               {messages.length === 0 ? (
                 <ChatEmptyState
@@ -323,6 +443,7 @@ export const ChatLayout = React.memo(function ChatLayout({
               status={chatStatus}
               chatMode={chatMode}
               onChatModeChange={setChatMode}
+              onFocus={handleInputFocus}
             />
           </ChatInputContainer>
         </ChatContent>

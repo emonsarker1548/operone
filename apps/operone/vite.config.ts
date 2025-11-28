@@ -28,7 +28,7 @@ export default defineConfig({
         },
       },
       {
-        entry: 'electron/preload.ts',
+        entry: 'electron/preload.cjs',
         onstart(options) {
           options.reload()
         },
@@ -36,7 +36,7 @@ export default defineConfig({
           build: {
             outDir: 'dist-electron',
             lib: {
-              entry: 'electron/preload.ts',
+              entry: 'electron/preload.cjs',
               formats: ['cjs'],
               fileName: () => 'preload.cjs',
             },

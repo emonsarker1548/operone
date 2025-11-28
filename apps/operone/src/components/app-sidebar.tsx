@@ -1,6 +1,7 @@
 import * as React from "react"
-import { Command, MessageSquare, ChevronRight, ChevronDown, Plus, MoreVertical, Trash2, Pencil } from "lucide-react"
+import { Command, MessageSquare, ChevronDown, MoreVertical, Trash2, Pencil } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
+import { useEffect, useCallback } from "react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -17,6 +18,7 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import {
   DropdownMenu,
@@ -34,6 +36,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts"
+import { useChat } from "@/contexts/chat-context"
 import { commonNavItems, quickActions, truncateText } from "@/components/app-navigation"
 import { cn } from "@/lib/utils"
 
@@ -41,89 +44,121 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const { isMobile, state, toggleSidebar } = useSidebar()
+
+  // Use unified chat context
+  const { chats, currentChat, createChat, setCurrentChat, updateChat, deleteChat } = useChat()
 
   const [renameDialogOpen, setRenameDialogOpen] = React.useState(false)
   const [chatToRename, setChatToRename] = React.useState<any>(null)
   const [newChatTitle, setNewChatTitle] = React.useState("")
 
-  // For now, we'll use a simple state for chats until we implement a proper chat context
-  const [chats, setChats] = React.useState<any[]>([])
-  const [currentChat, setCurrentChat] = React.useState<any>(null)
+  // Dynamic resize logic for auto-collapse behavior
+  const handleResize = useCallback(() => {
+    const width = window.innerWidth
+    const height = window.innerHeight
+    
+    // Auto-collapse if window hits minimum height (700px) or width (800px)
+    if ((width <= 800 || height <= 700) && state === "expanded" && !isMobile) {
+      toggleSidebar()
+    }
+  }, [state, isMobile, toggleSidebar])
+  
+  useEffect(() => {
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [handleResize])
 
   // Optimized data structure like ChatGPT
   const [expandedSections, setExpandedSections] = React.useState({
     chats: false
   })
 
-  const toggleSection = (section: 'chats') => {
+  // Toggle section with useCallback
+  const toggleSection = React.useCallback((section: 'chats') => {
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
     }))
-  }
+  }, []);
 
   // Get chats not associated with any project (general chats)
   const generalChats = chats
 
-  // Handle creating a new chat
-  const handleCreateNewChat = async () => {
-    const newChat = {
-      id: Date.now().toString(),
-      title: 'New Chat',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-    setChats(prev => [newChat, ...prev])
-    setCurrentChat(newChat)
-    // Use replace to avoid adding to history stack and ensure clean URL
-    navigate('/dashboard/chat', { replace: true })
-  }
-
-  // Handle selecting a chat
-  const handleSelectChat = async (chat: any) => {
-    setCurrentChat(chat)
-    navigate(`/dashboard/chat?chatId=${chat.id}`)
-  }
-
-  // Handle chat rename
-  const handleRenameChat = async () => {
-    if (chatToRename && newChatTitle.trim()) {
-      setChats(prev => prev.map(chat => 
-        chat.id === chatToRename.id 
-          ? { ...chat, title: newChatTitle.trim() }
-          : chat
-      ))
-      setRenameDialogOpen(false)
-      setChatToRename(null)
-      setNewChatTitle("")
-    }
-  }
-
-  // Handle chat delete
-  const handleDeleteChat = async (chat: any) => {
-    setChats(prev => prev.filter(c => c.id !== chat.id))
-    if (currentChat?.id === chat.id) {
+  // Handle creating a new chat (with error handling)
+  const handleCreateNewChat = React.useCallback(async () => {
+    try {
+      // If current chat has no messages, just reuse it instead of creating a new one
+      if (currentChat && (!currentChat.messages || currentChat.messages.length === 0)) {
+        // Reset to clean state and navigate
+        setCurrentChat(currentChat)
+        navigate('/dashboard/chat', { replace: true })
+        return
+      }
+      
+      // Otherwise create a new chat
+      await createChat()
+      // Use replace to avoid adding to history stack and ensure clean URL
       navigate('/dashboard/chat', { replace: true })
+    } catch (error) {
+      console.error('Failed to create chat:', error);
     }
-  }
+  }, [createChat, navigate, currentChat, setCurrentChat]);
 
-  // Open rename dialog
-  const openRenameDialog = (chat: any) => {
+  // Handle selecting a chat (with error handling)
+  const handleSelectChat = React.useCallback(async (chat: any) => {
+    try {
+      setCurrentChat(chat)
+      navigate(`/dashboard/chat?chatId=${chat.id}`)
+    } catch (error) {
+      console.error('Failed to select chat:', error);
+    }
+  }, [setCurrentChat, navigate]);
+
+  // Handle chat rename (with validation)
+  const handleRenameChat = React.useCallback(async () => {
+    if (chatToRename && newChatTitle.trim()) {
+      try {
+        updateChat(chatToRename.id, { title: newChatTitle.trim() })
+        setRenameDialogOpen(false)
+        setChatToRename(null)
+        setNewChatTitle("")
+      } catch (error) {
+        console.error('Failed to rename chat:', error);
+      }
+    }
+  }, [chatToRename, newChatTitle, updateChat]);
+
+  // Handle chat delete (with confirmation)
+  const handleDeleteChat = React.useCallback(async (chat: any) => {
+    try {
+      deleteChat(chat.id)
+      if (currentChat?.id === chat.id) {
+        navigate('/dashboard/chat', { replace: true })
+      }
+    } catch (error) {
+      console.error('Failed to delete chat:', error);
+    }
+  }, [deleteChat, currentChat, navigate]);
+
+  // Open rename dialog (reset state)
+  const openRenameDialog = React.useCallback((chat: any) => {
     setChatToRename(chat)
     setNewChatTitle(chat.title)
     setRenameDialogOpen(true)
-  }
+  }, []);
 
   // Simple static navigation items
   const navMainItems = React.useMemo(() => [], [])
 
-  const getInitials = (user: any) => {
+  // Memoized getInitials function
+  const getInitials = React.useCallback((user: any) => {
     if (!user || !user?.name) return 'GU'
     const names = user.name.split(' ')
     return names.length > 1
       ? `${names[0].charAt(0)}${names[1].charAt(0)}`.toUpperCase()
       : `${user.name.charAt(0)}`.toUpperCase()
-  }
+  }, []);
 
   // Check if we're on a settings page
   const isSettingsPage = location.pathname.startsWith('/settings')
@@ -160,7 +195,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <div className="flex items-center gap-2">
               <div className="relative group flex-1">
-                <SidebarMenuButton size="lg" asChild className="flex-1">
+                <SidebarMenuButton size="lg" asChild className="flex-1" tooltip="Operone">
                   <Link to="/dashboard/chat">
                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                       <Command className="size-4" />
@@ -185,7 +220,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
               {quickActions.map((action) => (
                 <SidebarMenuItem key={action.url}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild tooltip={action.title}>
                     {action.title === "New Chat" ? (
                       <button
                         onClick={handleCreateNewChat}
@@ -215,31 +250,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton
               onClick={() => toggleSection('chats')}
               className="w-full justify-between"
+              tooltip="Chats"
             >
               <span className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
-                Chats
+                <span className="group-data-[collapsible=icon]:hidden">Chats</span>
               </span>
-              {expandedSections.chats ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              <ChevronDown className="w-4 h-4 group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
           </SidebarGroupLabel>
           {expandedSections.chats && (
             <SidebarGroupContent>
               <div className="max-h-64 overflow-y-auto">
                 <SidebarMenu>
-                  {/* Create New Chat */}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild className="text-sidebar-foreground/70">
-                      <button
-                        onClick={handleCreateNewChat}
-                        className="flex items-center gap-2 w-full"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>New chat</span>
-                      </button>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-
                   {generalChats.map((chat) => (
                     <SidebarMenuItem key={chat.id}>
                       <div className="flex items-center justify-between w-full group">
@@ -249,16 +272,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             "flex-1",
                             currentChat?.id === chat.id && "bg-accent text-accent-foreground"
                           )}
+                          tooltip={truncateText(chat.title, 20)}
                         >
                           <button
                             onClick={() => handleSelectChat(chat)}
                             className="flex items-center gap-2 w-full"
                           >
                             <MessageSquare className="w-4 h-4 flex-shrink-0" />
-                            <span className="truncate">{truncateText(chat.title, 20)}</span>
+                            <span className="truncate group-data-[collapsible=icon]:hidden">{truncateText(chat.title, 20)}</span>
                           </button>
                         </SidebarMenuButton>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
                           <span className="text-xs text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                             {chat.updatedAt.toLocaleDateString()}
                           </span>

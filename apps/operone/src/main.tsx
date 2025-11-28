@@ -10,6 +10,13 @@ if (!isElectron) {
     console.info('%cRunning in browser mode. To use Electron features, run: pnpm electron:dev', 'color: #6b7280')
 }
 
+import { OSProvider } from './contexts/OSContext'
+import React from 'react'
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
-    <App />
+    <React.StrictMode>
+        <OSProvider>
+            <App />
+        </OSProvider>
+    </React.StrictMode>,
 )

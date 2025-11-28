@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { ProviderConfig, ProviderType, ModelInfo, ChatMessage, GeneratedImage, ExactTextResult, MessageType } from '@repo/types';
-import { BrowserAIService } from '@/utils/ollama-detector';
+import { BrowserAdapter } from '@repo/operone';
+
+const { BrowserAIService } = BrowserAdapter;
 
 interface AIContextType {
     // Chat
@@ -34,7 +36,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
     const [streamingMessage, setStreamingMessage] = useState<string | null>(null);
     const [activeProvider, setActiveProviderState] = useState<ProviderConfig | null>(null);
     const [allProviders, setAllProviders] = useState<Record<string, ProviderConfig>>({});
-    const [browserAIService, setBrowserAIService] = useState<BrowserAIService | null>(null);
+    const [browserAIService, setBrowserAIService] = useState<InstanceType<typeof BrowserAIService> | null>(null);
     const [currentMode] = useState<MessageType>('text');
 
     // Load initial configuration
@@ -351,7 +353,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
             cleanupFunctions.push(window.electronAPI.ai.onStreamError(onError));
 
             // Start streaming
-            await window.electronAPI.ai.sendMessageStreaming(content);
+            await window.electronAPI.ai.sendMessageStreaming(content, currentMode);
         } catch (error) {
             console.error('Failed to send streaming message:', error);
 

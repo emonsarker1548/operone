@@ -1,0 +1,69 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "target": "ES2020",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "paths": {
+            "@operone/core": [
+                "packages/core/src/index.ts"
+            ],
+            "@operone/fs": [
+                "packages/fs/src/index.ts"
+            ],
+            "@operone/shell": [
+                "packages/shell/src/index.ts"
+            ],
+            "@operone/shared": [
+                "packages/shared/src/index.ts"
+            ],
+            "@operone/memory": [
+                "packages/memory/src/index.ts"
+            ],
+            "@operone/db": [
+                "packages/db/src/index.ts"
+            ],
+            "@operone/fastlane": [
+                "packages/fastlane/src/index.ts"
+            ],
+            "@operone/automation": [
+                "packages/automation/src/index.ts"
+            ],
+            "@operone/networking": [
+                "packages/networking/src/index.ts"
+            ],
+            "@operone/thinking": [
+                "packages/thinking/src/index.ts"
+            ],
+            "@operone/context": [
+                "packages/context/src/index.ts"
+            ],
+            "@operone/ai": [
+                "packages/ai/src/index.ts"
+            ],
+            "@operone/sdb": [
+                "packages/sdb/src/index.ts"
+            ],
+            "@operone/agents": [
+                "packages/agents/src/index.ts"
+            ],
+            "@operone/plugins": [
+                "packages/plugins/src/index.ts"
+            ],
+            "@repo/types": [
+                "packages/types/src/index.ts"
+            ],
+            "@repo/operone": [
+                "packages/operone/src/index.ts"
+            ]
+        }
+    },
+    "include": [
+        "packages/**/*",
+        "tests/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}

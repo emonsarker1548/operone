@@ -1,35 +1,42 @@
 import * as React from "react"
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import { SidebarProvider, SidebarInset, useSidebar } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
     ResizableHandle,
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
-import { cn } from "@/lib/utils"
+import { useChat } from "@/contexts/chat-context"
 
 interface MainLayoutProps {
     children: React.ReactNode
-    agentPanel?: React.ReactNode
     contextPanel?: React.ReactNode
-    defaultLayout?: number[]
-    navCollapsedSize?: number
 }
 
-export function MainLayout({
+function MainLayoutContent({
     children,
-    agentPanel,
     contextPanel,
-    defaultLayout = [70, 30],
-    navCollapsedSize = 4,
 }: MainLayoutProps) {
-    const [isCollapsed, setIsCollapsed] = React.useState(false)
+    const { currentChat } = useChat()
+    const { isMobile } = useSidebar()
+
+    // Determine if we have messages (chat is active)
+    const hasMessages = currentChat && currentChat.messages && currentChat.messages.length > 0
+
+    // When no messages: show only main content (chat) - full width
+    // When has messages: show context panel (if available) + chat
+    // On mobile: always show chat full width if has messages
 
     return (
-        <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-                <div className="h-full flex-1 overflow-hidden">
+        <SidebarInset>
+            <div className="h-full flex-1 overflow-hidden">
+                {!hasMessages || isMobile ? (
+                    // No messages OR Mobile: Show only chat (full width)
+                    <div className="h-full flex flex-col">
+                        {children}
+                    </div>
+                ) : (
+                    // Has messages AND Desktop: Show only Context panel (if available), Chat on right
                     <ResizablePanelGroup
                         direction="horizontal"
                         onLayout={(sizes: number[]) => {
@@ -39,39 +46,45 @@ export function MainLayout({
                         }}
                         className="h-full items-stretch"
                     >
-                        <ResizablePanel defaultSize={defaultLayout[0]} minSize={30}>
-                            <div className="h-full flex flex-col">
-                                {children}
-                            </div>
-                        </ResizablePanel>
-
-                        {(agentPanel || contextPanel) && (
+                        {/* Context Panel only when chatting (Activity removed) */}
+                        {contextPanel && (
                             <>
-                                <ResizableHandle withHandle />
                                 <ResizablePanel
-                                    defaultSize={defaultLayout[1]}
+                                    defaultSize={25}
                                     minSize={20}
-                                    collapsible={true}
-                                    collapsedSize={navCollapsedSize}
-                                    onCollapse={() => setIsCollapsed(true)}
-                                    onExpand={() => setIsCollapsed(false)}
-                                    className={cn(
-                                        isCollapsed && "min-w-[50px] transition-all duration-300 ease-in-out"
-                                    )}
+                                    maxSize={40}
                                 >
-                                    <div className="h-full flex flex-col border-l bg-background/50 backdrop-blur-sm">
-                                        {/* Tabs or switcher for Agent/Context could go here */}
+                                    <div className="h-full flex flex-col border-r bg-background/50 backdrop-blur-sm">
                                         <div className="flex-1 overflow-auto p-4">
-                                            {agentPanel}
                                             {contextPanel}
                                         </div>
                                     </div>
                                 </ResizablePanel>
+                                <ResizableHandle withHandle />
                             </>
                         )}
+
+                        {/* Chat Panel */}
+                        <ResizablePanel
+                            defaultSize={hasMessages && contextPanel ? 75 : 100}
+                            minSize={60}
+                        >
+                            <div className="h-full flex flex-col">
+                                {children}
+                            </div>
+                        </ResizablePanel>
                     </ResizablePanelGroup>
-                </div>
-            </SidebarInset>
+                )}
+            </div>
+        </SidebarInset>
+    )
+}
+
+export function MainLayout(props: MainLayoutProps) {
+    return (
+        <SidebarProvider defaultOpen={true}>
+            <AppSidebar collapsible="icon" />
+            <MainLayoutContent {...props} />
         </SidebarProvider>
     )
 }

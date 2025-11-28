@@ -8,7 +8,7 @@ export function ContextPanel() {
             <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                     <Database className="w-5 h-5" />
-                    Context & Memory
+                    Memory Stats
                 </h2>
             </div>
 
@@ -18,12 +18,25 @@ export function ContextPanel() {
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium flex items-center gap-2">
                                 <FileText className="w-4 h-4" />
-                                Active Context
+                                Vector Docs
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-2xl font-bold">0</p>
+                            <p className="text-xs text-muted-foreground">Short-term</p>
+                        </CardContent>
+                    </Card>
+                    
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                <Database className="w-4 h-4" />
+                                Recent Events
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <p className="text-xs text-muted-foreground">
-                                No active context retrieved yet.
+                                No activity yet
                             </p>
                         </CardContent>
                     </Card>

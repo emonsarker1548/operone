@@ -2,6 +2,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createMistral } from '@ai-sdk/mistral';
+import { createOllama } from 'ollama-ai-provider-v2';
 import type { 
   ProviderConfig, 
   ProviderType, 
@@ -74,10 +75,9 @@ export class ModelProvider {
   }
 
   private createOllamaProvider(config: OllamaConfig) {
-    // Ollama uses OpenAI-compatible API
-    return createOpenAI({
-      apiKey: 'ollama', // Ollama doesn't require a real API key
-      baseURL: config.baseURL + '/v1',
+    // Use native Ollama provider
+    return createOllama({
+      baseURL: config.baseURL + '/api',
     });
   }
 

@@ -41,11 +41,12 @@ export const ChatContent = ({ children, className }: ChatContentProps) => (
 export interface ChatMessagesProps {
   children: ReactNode;
   className?: string;
+  onScroll?: () => void;
 }
 
-export const ChatMessages = ({ children, className }: ChatMessagesProps) => (
+export const ChatMessages = ({ children, className, onScroll }: ChatMessagesProps) => (
   <div className={cn("flex-1 overflow-hidden", className)}>
-    <ScrollArea className="h-full">
+    <ScrollArea className="h-full" onScroll={onScroll}>
       {children}
     </ScrollArea>
   </div>

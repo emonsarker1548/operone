@@ -12,14 +12,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
     queryMemory: (query) => ipcRenderer.invoke('ai:queryMemory', query),
     getStats: () => ipcRenderer.invoke('ai:getStats'),
 
-    // File operations
-    readFile: (filePath) => ipcRenderer.invoke('file:read', filePath),
-    writeFile: (filePath, content) =>
-        ipcRenderer.invoke('file:write', { filePath, content }),
-    listDirectory: (dirPath) => ipcRenderer.invoke('file:list', dirPath),
+    // OS File operations
+    fs: {
+        read: (path) => ipcRenderer.invoke('os:fs:read', path),
+        write: (path, content) => ipcRenderer.invoke('os:fs:write', path, content),
+        list: (path) => ipcRenderer.invoke('os:fs:list', path),
+    },
 
-    // Shell operations
-    executeCommand: (command) => ipcRenderer.invoke('shell:execute', command),
+    // OS Shell operations
+    shell: {
+        execute: (command, args) => ipcRenderer.invoke('os:shell:execute', command, args),
+    },
+
+    // System operations
+    system: {
+        getMetrics: () => ipcRenderer.invoke('os:system:metrics'),
+    },
 
     // Settings
     getSettings: () => ipcRenderer.invoke('settings:get'),

@@ -8,6 +8,12 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import Store from 'electron-store'
 import type { ProviderType } from '@repo/types'
+import fs from 'fs/promises'
+import os from 'os'
+import { exec } from 'child_process'
+import util from 'util'
+
+const execAsync = util.promisify(exec)
 
 // ES module compatibility
 const __filename = fileURLToPath(import.meta.url)
@@ -38,7 +44,6 @@ function getOrCreateAIService() {
   }
   return aiService
 }
-
 function createWindow() {
   try {
     // Set CSP at session level for early application
@@ -63,7 +68,7 @@ function createWindow() {
       width: 1200,
       height: 800,
       webPreferences: {
-        preload: path.join(__dirname, '../electron/preload.cjs'),
+        preload: path.join(__dirname, '../dist-electron/preload.cjs'),
         nodeIntegration: false,
         contextIsolation: true,
         webSecurity: true,
@@ -307,6 +312,15 @@ function setupIPCHandlers() {
   })
 
   ipcMain.handle('auth:getUser', async () => {
+    // Return mock user in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return {
+        id: 'test-user',
+        name: 'Test User',
+        email: 'test@example.com',
+        image: null
+      }
+    }
     // Return stored user data if available
     const user = store.get('user')
     return user || null
@@ -318,6 +332,63 @@ function setupIPCHandlers() {
     store.set('authToken', token)
     return true
   })
+
+  // OS Capability Handlers
+  // Imports are moved to top-level
+  
+  // File System
+  ipcMain.handle('os:fs:read', async (_event, filePath: string) => {
+    return await fs.readFile(filePath, 'utf-8');
+  });
+
+  ipcMain.handle('os:fs:write', async (_event, filePath: string, content: string) => {
+    await fs.writeFile(filePath, content, 'utf-8');
+    return true;
+  });
+
+  ipcMain.handle('os:fs:list', async (_event, dirPath: string) => {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    return entries.map((entry: any) => ({
+      name: entry.name,
+      isDirectory: entry.isDirectory(),
+      path: path.join(dirPath, entry.name)
+    }));
+  });
+
+  // Shell
+  ipcMain.handle('os:shell:execute', async (_event, command: string) => {
+    try {
+      const { stdout, stderr } = await execAsync(command);
+      return { stdout, stderr, exitCode: 0 };
+    } catch (error: any) {
+      return { stdout: '', stderr: error.message, exitCode: error.code || 1 };
+    }
+  });
+
+  // System Metrics
+  ipcMain.handle('os:system:metrics', async () => {
+    const cpus = os.cpus();
+    const cpuUsage = cpus.reduce((acc: number, cpu: any) => {
+        const total = Object.values(cpu.times).reduce((a: any, b: any) => a + b, 0);
+        const idle = cpu.times.idle;
+        return acc + ((total - idle) / total) * 100;
+    }, 0) / cpus.length;
+
+    return {
+      cpu: {
+        usage: cpuUsage,
+        count: cpus.length,
+        model: cpus[0].model
+      },
+      memory: {
+        total: os.totalmem(),
+        free: os.freemem(),
+        used: os.totalmem() - os.freemem()
+      },
+      uptime: os.uptime(),
+      platform: os.platform() + ' ' + os.release()
+    };
+  });
 }
 
 const gotTheLock = app.requestSingleInstanceLock()

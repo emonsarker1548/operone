@@ -1,3 +1,4 @@
-export { AuthProvider, useAuth } from './auth-context'
-export { AIProvider, useAI } from './ai-context'
-export { ModelDetectorProvider, useModelDetector } from './model-context'
+export { useAuth } from './auth-context';
+export { useAI } from './ai-context';
+export { useChat } from './chat-context';
+export { ModelDetectorProvider, useModelDetector } from './model-context';
