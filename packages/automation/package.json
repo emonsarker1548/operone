@@ -15,8 +15,10 @@
         "@repo/types": "workspace:*",
         "puppeteer": "^21.6.1",
         "playwright": "^1.40.1",
-        "robotjs": "^0.6.0",
         "jimp": "^0.22.10"
+    },
+    "optionalDependencies": {
+        "robotjs": "^0.6.0"
     },
     "devDependencies": {
         "@repo/eslint-config": "workspace:*",
