@@ -1,86 +1,102 @@
-import { Agent } from '@repo/types';
-import { FileTool, ShellTool } from '@repo/mcp-tools';
-import { generateText } from 'ai';
 import { ModelProvider } from '../model-provider';
+import { generateText } from 'ai';
+import { EventBus } from '../core/EventBus';
+import { OS_AGENT_SYSTEM_PROMPT } from '../prompts/os-agent';
 
-export interface OSAgentConfig {
-  modelProvider: ModelProvider;
-  allowedPaths?: string[];
-  allowedCommands?: string[];
+export interface OSAgentOptions {
+  provider: ModelProvider;
+  eventBus?: EventBus;
 }
 
-export class OSAgent implements Agent {
-  public readonly id = 'os-agent';
-  public readonly name = 'OS Agent';
-  public readonly role = 'os' as const;
+/**
+ * OSAgent - Operating System interaction agent
+ * Handles OS-level operations and system commands
+ */
+export class OSAgent {
+  private provider: ModelProvider;
+  private eventBus: EventBus;
 
-  private modelProvider: ModelProvider;
-  private fileTool: FileTool;
-  private shellTool: ShellTool;
-  // private logTool: LogTool;
-  private lastAction: string = '';
-
-  constructor(config: OSAgentConfig) {
-    this.modelProvider = config.modelProvider;
-    this.fileTool = new FileTool(config.allowedPaths);
-    this.shellTool = new ShellTool(config.allowedCommands);
-    // this.logTool = new LogTool();
-  }
-
-  async think(input: string): Promise<string> {
-    const systemPrompt = `You are an OS Agent responsible for system operations.
-You have access to:
-- File operations (read, write, list, delete)
-- Shell commands (safe execution only)
-- System logs (read and search)
-
-Analyze the user's request and determine the best action to take.
-If you have a final answer, prefix it with "FINAL ANSWER:".
-Otherwise, describe the action you want to take.`;
-
-    const { text } = await generateText({
-      model: this.modelProvider.getModel(),
-      system: systemPrompt,
-      prompt: `User request: ${input}\n\nWhat should I do?`,
-    });
-
-    return text;
-  }
-
-  async act(action: string): Promise<void> {
-    this.lastAction = action;
-
-    // Parse action and execute appropriate tool
-    if (action.toLowerCase().includes('read file')) {
-      const filePathMatch = action.match(/['"]([^'"]+)['"]/);
-      if (filePathMatch) {
-        const result = await this.fileTool.execute({
-          operation: 'read',
-          filePath: filePathMatch[1]
-        });
-        this.lastAction = `Read file: ${result}`;
-      }
-    } else if (action.toLowerCase().includes('execute') || action.toLowerCase().includes('run command')) {
-      const commandMatch = action.match(/['"]([^'"]+)['"]/);
-      if (commandMatch) {
-        const result = await this.shellTool.execute({
-          command: commandMatch[1]
-        });
-        this.lastAction = `Executed command: ${JSON.stringify(result)}`;
-      }
-    } else if (action.toLowerCase().includes('list')) {
-      const dirMatch = action.match(/['"]([^'"]+)['"]/);
-      if (dirMatch) {
-        const result = await this.fileTool.execute({
-          operation: 'list',
-          filePath: dirMatch[1]
-        });
-        this.lastAction = `Listed directory: ${JSON.stringify(result)}`;
-      }
+  constructor(options: OSAgentOptions | ModelProvider) {
+    // Support both old and new constructor signatures
+    if (options instanceof ModelProvider) {
+      this.provider = options;
+      this.eventBus = EventBus.getInstance();
+    } else {
+      this.provider = options.provider;
+      this.eventBus = options.eventBus || EventBus.getInstance();
     }
   }
 
-  async observe(): Promise<string> {
-    return this.lastAction || 'No action taken yet';
+  /**
+   * Execute an OS command (simulated for now)
+   * In a real implementation, this would use @operone/shell or similar
+   */
+  async execute(command: string): Promise<string> {
+    try {
+      this.eventBus.publish('agent', 'os-command', { command });
+      
+      // Simulated execution - in production this would use @operone/shell
+      // or be executed via IPC in the Electron main process
+      return `Simulated execution of command: ${command}`;
+    } catch (error) {
+      console.error('Error executing command:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Analyze a user request and determine what OS operations are needed
+   */
+  async analyzeRequest(request: string): Promise<{
+    intent: string;
+    commands: string[];
+    explanation: string;
+  }> {
+    try {
+      const model = this.provider.getModel();
+      
+      const { text } = await generateText({
+        model,
+        messages: [
+          { role: 'system', content: OS_AGENT_SYSTEM_PROMPT },
+          { 
+            role: 'user', 
+            content: `Analyze this request and determine what OS operations are needed:\n\n${request}\n\nRespond in JSON format with: { "intent": "...", "commands": ["..."], "explanation": "..." }`
+          }
+        ],
+      });
+
+      // Parse the JSON response
+      try {
+        const parsed = JSON.parse(text);
+        return parsed;
+      } catch {
+        // If parsing fails, return a default structure
+        return {
+          intent: 'unknown',
+          commands: [],
+          explanation: text
+        };
+      }
+    } catch (error) {
+      console.error('Error analyzing request:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get system information
+   */
+  async getSystemInfo(): Promise<{
+    platform: string;
+    arch: string;
+    version: string;
+  }> {
+    // This would be implemented with actual system calls
+    return {
+      platform: process.platform,
+      arch: process.arch,
+      version: process.version
+    };
   }
 }

@@ -72,7 +72,7 @@ export function LoginScreen() {
                         {isLoading ? (
                             <>
                                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                Checking session...
+                                Opening browser...
                             </>
                         ) : (
                             'Login with Operone'
@@ -83,7 +83,7 @@ export function LoginScreen() {
                     {isLoading && (
                         <div className="text-center space-y-2">
                             <p className="text-sm text-muted-foreground">
-                                Checking for existing session...
+                                Please complete authentication in your browser
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 You'll be redirected automatically after login

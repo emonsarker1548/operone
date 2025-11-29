@@ -1,0 +1,35 @@
+{
+    "name": "@operone/core",
+    "version": "0.1.0",
+    "description": "Core OS-level task orchestration and process management",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test": "vitest run",
+        "test:watch": "vitest watch",
+        "test:coverage": "vitest run --coverage",
+        "lint": "eslint src/",
+        "check-types": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@repo/types": "workspace:*"
+    },
+    "devDependencies": {
+        "@repo/eslint-config": "workspace:*",
+        "@repo/typescript-config": "workspace:*",
+        "@types/node": "^20.10.0",
+        "typescript": "5.9.3",
+        "vitest": "^2.1.8"
+    },
+    "keywords": [
+        "operone",
+        "os",
+        "orchestration",
+        "process-management",
+        "task-scheduler"
+    ],
+    "author": "Operone Team",
+    "license": "MIT"
+}

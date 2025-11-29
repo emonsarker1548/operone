@@ -1,32 +1,31 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import { AuthProvider, useAuth } from './contexts/auth-context'
 import { AIProvider } from './contexts/ai-context'
-import { ProjectProvider } from './contexts/project-context'
+import { ChatProvider } from './contexts/chat-context'
 import { ModelDetectorProvider } from './contexts'
 import { LoginScreen } from './components/auth/login-screen'
-import { AppLayout } from './components/layout/app-layout'
+import { LoginAnimation } from './components/auth/login-animation'
+import { MainLayout } from './components/layout/main-layout'
 import faviconUrl from './assets/favicon.ico'
 import './App.css'
 import { Loader } from './components/ai/loader'
 
 // Lazy load feature components
 const ChatInterface = lazy(() => import('./features/chat/chat').then(module => ({ default: module.default })))
-const ProjectDetail = lazy(() => import('./features/project/project-detail').then(module => ({ default: module.ProjectDetail })))
-const SettingsPanel = lazy(() => import('./features/settings/settings-panel').then(module => ({ default: module.SettingsPanel })))
-const MemoryInspector = lazy(() => import('./features/memory/memory-inspector').then(module => ({ default: module.MemoryInspector })))
+const UnifiedSettings = lazy(() => import('./features/settings/index').then(module => ({ default: module.UnifiedSettings })))
 const AddModelPage = lazy(() => import('./features/settings/add-model-page').then(module => ({ default: module.AddModelPage })))
 
 function LoadingSpinner() {
     return (
         <div className="h-full w-full flex items-center justify-center">
-           <Loader />
+            <Loader />
         </div>
     )
 }
 
 function AppContent() {
-    const { isAuthenticated, isLoading } = useAuth()
+    const { isAuthenticated, isLoading, user, isNewLogin, clearNewLoginFlag } = useAuth()
 
     // Show loading state while checking authentication
     if (isLoading) {
@@ -48,28 +47,33 @@ function AppContent() {
         return <LoginScreen />
     }
 
+    // Show login animation on fresh login
+    if (isNewLogin && user) {
+        return (
+            <LoginAnimation
+                userName={user.name}
+                onComplete={() => {
+                    clearNewLoginFlag()
+                }}
+            />
+        )
+    }
+
     // Show main app if authenticated
     return (
-        <ProjectProvider>
-            <AppLayout>
-                <ModelDetectorProvider>
-                    <Suspense fallback={<LoadingSpinner />}>
-                        <Routes>
+        <MainLayout>
+            <ModelDetectorProvider>
+                <Suspense fallback={<LoadingSpinner />}>
+                    <Routes>
                         <Route path="/dashboard/chat" element={<ChatInterface />} />
-                        <Route path="/dashboard/memory" element={<MemoryInspector />} />
-                        <Route path="/project/:projectId" element={<ProjectDetail />} />
-                        <Route path="/settings/account" element={<SettingsPanel />} />
-                        <Route path="/settings/billing" element={<SettingsPanel />} />
-                        <Route path="/settings/notifications" element={<SettingsPanel />} />
+                        <Route path="/settings" element={<UnifiedSettings />} />
                         <Route path="/settings/models/add" element={<AddModelPage />} />
-                        <Route path="/settings" element={<Navigate to="/settings/account" replace />} />
                         <Route path="/" element={<Navigate to="/dashboard/chat" replace />} />
                         <Route path="/dashboard" element={<Navigate to="/dashboard/chat" replace />} />
                     </Routes>
                 </Suspense>
             </ModelDetectorProvider>
-        </AppLayout>
-    </ProjectProvider>
+        </MainLayout>
     )
 }
 
@@ -78,7 +82,9 @@ export default function App() {
         <Router>
             <AuthProvider>
                 <AIProvider>
-                    <AppContent />
+                    <ChatProvider>
+                        <AppContent />
+                    </ChatProvider>
                 </AIProvider>
             </AuthProvider>
         </Router>

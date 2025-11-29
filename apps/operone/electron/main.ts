@@ -8,6 +8,12 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import Store from 'electron-store'
 import type { ProviderType } from '@repo/types'
+import fs from 'fs/promises'
+import os from 'os'
+import { exec } from 'child_process'
+import util from 'util'
+
+const execAsync = util.promisify(exec)
 
 // ES module compatibility
 const __filename = fileURLToPath(import.meta.url)
@@ -27,6 +33,7 @@ app.commandLine.appendSwitch('disable-gpu')
 app.commandLine.appendSwitch('disable-gpu-compositing')
 
 import { getAIService } from './services/ai-service'
+import { getStorageService } from './services/storage-service'
 
 // AI Service - initialized lazily
 let aiService: ReturnType<typeof getAIService> | null = null
@@ -37,7 +44,6 @@ function getOrCreateAIService() {
   }
   return aiService
 }
-
 function createWindow() {
   try {
     // Set CSP at session level for early application
@@ -48,7 +54,7 @@ function createWindow() {
       callback({
         responseHeaders: {
           ...details.responseHeaders,
-          'Content-Security-Policy': ["default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: http: ws: wss:; font-src 'self' data:;"]
+          'Content-Security-Policy': ["default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https: http: ws: wss:; font-src 'self' data:;"]
         }
       })
     })
@@ -59,10 +65,13 @@ function createWindow() {
     })
 
     mainWindow = new BrowserWindow({
+      title: 'Operone',
       width: 1200,
       height: 800,
+      minWidth: 600,
+      minHeight: 700,
       webPreferences: {
-        preload: path.join(__dirname, '../electron/preload.cjs'),
+        preload: path.join(__dirname, '../dist-electron/preload.cjs'),
         nodeIntegration: false,
         contextIsolation: true,
         webSecurity: true,
@@ -85,7 +94,7 @@ function createWindow() {
           if (!document.querySelector('meta[http-equiv="Content-Security-Policy"]')) {
             const meta = document.createElement('meta');
             meta.httpEquiv = 'Content-Security-Policy';
-            meta.content = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: http: ws: wss:; font-src 'self' data:;";
+            meta.content = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https: http: ws: wss:; font-src 'self' data:;";
             document.head.appendChild(meta);
           }
         `)
@@ -95,6 +104,10 @@ function createWindow() {
     mainWindow.on('closed', () => {
       mainWindow = null
     })
+
+    // Pass mainWindow to AIService for event forwarding
+    const service = getOrCreateAIService()
+    service.setMainWindow(mainWindow)
   } catch (error) {
     console.error('Failed to create window:', error)
     throw error
@@ -135,9 +148,14 @@ function handleDeepLink(url: string) {
 // IPC Handlers
 function setupIPCHandlers() {
   // Legacy AI Chat (for backward compatibility)
-  ipcMain.handle('ai:sendMessage', async (_event, message: string) => {
+  ipcMain.handle('ai:sendMessage', async (_event, message: string, mode: 'chat' | 'planning' = 'chat') => {
     const service = getOrCreateAIService()
-    return await service.sendMessage(message)
+    return await service.sendMessage(message, mode)
+  })
+
+  ipcMain.handle('ai:sendMessageStreaming', async (_event, message: string, mode: 'chat' | 'planning' = 'chat') => {
+    const service = getOrCreateAIService()
+    return await service.sendMessageStreaming(message, mode)
   })
 
   // Memory operations
@@ -202,6 +220,51 @@ function setupIPCHandlers() {
     return service.getModels(providerType)
   })
 
+
+// ... existing code ...
+
+
+
+  // Chat Management
+  ipcMain.handle('chat:create', async (_event, chat: any) => {
+    const service = getStorageService()
+    service.createChat(chat)
+    return chat
+  })
+
+  ipcMain.handle('chat:getAll', async () => {
+    const service = getStorageService()
+    return service.getAllChats()
+  })
+
+  ipcMain.handle('chat:getById', async (_event, chatId: string) => {
+    const service = getStorageService()
+    return service.getChat(chatId)
+  })
+
+
+
+  ipcMain.handle('chat:update', async (_event, { id, updates }: { id: string; updates: any }) => {
+    const service = getStorageService()
+    service.updateChat(id, updates)
+    return service.getChat(id)
+  })
+
+  ipcMain.handle('chat:delete', async (_event, chatId: string) => {
+    const service = getStorageService()
+    service.deleteChat(chatId)
+    return true
+  })
+
+  ipcMain.handle('chat:setActive', async (_event, chatId: string) => {
+    store.set('activeChat', chatId)
+    return true
+  })
+
+  ipcMain.handle('chat:getActive', async () => {
+    return store.get('activeChat', null)
+  })
+
   // Settings
   ipcMain.handle('settings:get', async () => {
     return store.get('settings', {})
@@ -227,6 +290,15 @@ function setupIPCHandlers() {
   })
 
   ipcMain.handle('auth:getUser', async () => {
+    // Return mock user in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return {
+        id: 'test-user',
+        name: 'Test User',
+        email: 'test@example.com',
+        image: null
+      }
+    }
     // Return stored user data if available
     const user = store.get('user')
     return user || null
@@ -238,6 +310,64 @@ function setupIPCHandlers() {
     store.set('authToken', token)
     return true
   })
+
+  // OS Capability Handlers
+  // Imports are moved to top-level
+  
+  // File System
+  ipcMain.handle('os:fs:read', async (_event, filePath: string) => {
+    return await fs.readFile(filePath, 'utf-8');
+  });
+
+  ipcMain.handle('os:fs:write', async (_event, filePath: string, content: string) => {
+    await fs.writeFile(filePath, content, 'utf-8');
+    return true;
+  });
+
+  ipcMain.handle('os:fs:list', async (_event, dirPath: string) => {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    return entries.map((entry: any) => ({
+      name: entry.name,
+      isDirectory: entry.isDirectory(),
+      path: path.join(dirPath, entry.name)
+    }));
+  });
+
+  // Shell
+  ipcMain.handle('os:shell:execute', async (_event, command: string) => {
+    try {
+      const { stdout, stderr } = await execAsync(command);
+      return { stdout, stderr, exitCode: 0 };
+    } catch (error: any) {
+      return { stdout: '', stderr: error.message, exitCode: error.code || 1 };
+    }
+  });
+
+  // System Metrics
+  ipcMain.handle('os:system:metrics', async () => {
+    const cpus = os.cpus();
+    const cpuUsage = cpus.reduce((acc: number, cpu: any) => {
+        const times = cpu.times as { user: number; nice: number; sys: number; idle: number; irq: number };
+        const total = Object.values(times).reduce((a: number, b: number) => a + b, 0);
+        const idle = times.idle;
+        return acc + ((total - idle) / total) * 100;
+    }, 0) / cpus.length;
+
+    return {
+      cpu: {
+        usage: cpuUsage,
+        count: cpus.length,
+        model: cpus[0]?.model || 'Unknown'
+      },
+      memory: {
+        total: os.totalmem(),
+        free: os.freemem(),
+        used: os.totalmem() - os.freemem()
+      },
+      uptime: os.uptime(),
+      platform: os.platform() + ' ' + os.release()
+    };
+  });
 }
 
 const gotTheLock = app.requestSingleInstanceLock()

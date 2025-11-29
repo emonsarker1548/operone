@@ -11,7 +11,7 @@ export interface ChatLayoutProps {
 }
 
 export const ChatLayout = ({ children, className }: ChatLayoutProps) => (
-  <div className={cn("flex flex-col h-screen overflow-hidden bg-background", className)}>
+  <div className={cn("flex flex-col h-screen max-h-screen min-h-screen overflow-hidden bg-background w-full", className)}>
     {children}
   </div>
 );
@@ -22,7 +22,7 @@ export interface ChatMainProps {
 }
 
 export const ChatMain = ({ children, className }: ChatMainProps) => (
-  <div className={cn("flex-1 flex overflow-hidden min-h-0", className)}>
+  <div className={cn("flex-1 flex overflow-hidden min-h-0 h-full w-full", className)}>
     {children}
   </div>
 );
@@ -33,20 +33,43 @@ export interface ChatContentProps {
 }
 
 export const ChatContent = ({ children, className }: ChatContentProps) => (
-  <div className={cn("flex-1 flex flex-col min-h-0 relative", className)}>
+  <div className={cn("flex-1 flex flex-col min-h-0 relative h-full w-full", className)}>
     {children}
   </div>
 );
 
+export interface ChatPanelProps {
+  children: ReactNode;
+  className?: string;
+  isOpen?: boolean;
+  width?: string;
+}
+
+export const ChatPanel = ({ children, className, isOpen = false, width = "400px" }: ChatPanelProps) => {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className={cn("border-l bg-background hidden md:flex flex-col h-full transition-all duration-300 ease-in-out", className)}
+      style={{ width }}
+    >
+      {children}
+    </div>
+  );
+};
+
 export interface ChatMessagesProps {
   children: ReactNode;
   className?: string;
+  onScroll?: () => void;
 }
 
-export const ChatMessages = ({ children, className }: ChatMessagesProps) => (
-  <div className={cn("flex-1 overflow-hidden", className)}>
-    <ScrollArea className="h-full">
-      {children}
+export const ChatMessages = ({ children, className, onScroll }: ChatMessagesProps) => (
+  <div className={cn("flex-1 overflow-hidden relative", className)}>
+    <ScrollArea className="h-full w-full" onScroll={onScroll}>
+      <div className="pr-2">
+        {children}
+      </div>
     </ScrollArea>
   </div>
 );
@@ -57,7 +80,7 @@ export interface ChatMessagesContainerProps {
 }
 
 export const ChatMessagesContainer = ({ children, className }: ChatMessagesContainerProps) => (
-  <div className={cn("max-w-lg mx-auto px-2 py-3 sm:px-3", className)}>
+  <div className={cn("max-w-[600px] mx-auto px-2 py-3 sm:px-3", className)}>
     <div className="space-y-4">
       {children}
     </div>
@@ -70,8 +93,8 @@ export interface ChatInputContainerProps {
 }
 
 export const ChatInputContainer = ({ children, className }: ChatInputContainerProps) => (
-  <div className={cn("flex-shrink-0 bg-background", className)}>
-    <div className="max-w-lg mx-auto p-2 sm:p-3">
+  <div className={cn("flex-shrink-0 bg-background border-t", className)}>
+    <div className="max-w-[600px] mx-auto p-2 sm:p-3">
       {children}
     </div>
   </div>
@@ -85,12 +108,12 @@ export interface ChatEmptyStateProps {
   className?: string;
 }
 
-export const ChatEmptyState = ({ 
+export const ChatEmptyState = ({
   title = "Start a conversation",
   description = "Ask me anything! I'm here to help with your questions and tasks.",
   icon,
   actions,
-  className 
+  className
 }: ChatEmptyStateProps) => (
   <div className={cn("flex flex-col items-center justify-center py-6 px-2 text-center", className)}>
     {icon && (
@@ -117,18 +140,12 @@ export const ChatMessageList = ({ children, className }: ChatMessageListProps) =
 
 export interface ChatStatusBarProps {
   status?: ReactNode;
-  messageCount?: ReactNode;
   className?: string;
 }
 
-export const ChatStatusBar = ({ status, messageCount, className }: ChatStatusBarProps) => (
-  <div className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 px-1", className)}>
-    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-      {status}
-    </div>
-    <div className="text-xs text-muted-foreground">
-      {messageCount}
-    </div>
+export const ChatStatusBar = ({ status, className }: ChatStatusBarProps) => (
+  <div className={cn("flex items-center gap-2 text-xs text-muted-foreground mb-2 px-1", className)}>
+    {status}
   </div>
 );
 

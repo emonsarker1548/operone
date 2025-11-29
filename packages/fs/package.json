@@ -1,0 +1,38 @@
+{
+    "name": "@operone/fs",
+    "version": "0.1.0",
+    "description": "Cross-platform file system operations for Operone",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test": "vitest run",
+        "test:watch": "vitest watch",
+        "lint": "eslint src/",
+        "check-types": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@repo/types": "workspace:*",
+        "fs-extra": "^11.2.0",
+        "chokidar": "^3.6.0",
+        "pdf-parse": "^1.1.1",
+        "mammoth": "^1.8.0",
+        "glob": "^10.3.10"
+    },
+    "devDependencies": {
+        "@repo/eslint-config": "workspace:*",
+        "@types/node": "^20.10.0",
+        "@types/fs-extra": "^11.0.4",
+        "@types/pdf-parse": "^1.1.4",
+        "typescript": "5.9.3",
+        "vitest": "^2.1.8"
+    },
+    "keywords": [
+        "operone",
+        "filesystem",
+        "cross-platform"
+    ],
+    "author": "Operone Team",
+    "license": "MIT"
+}

@@ -1,0 +1,38 @@
+{
+    "name": "@operone/networking",
+    "version": "0.1.0",
+    "description": "Networking and multi-PC orchestration for Operone",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test": "vitest run",
+        "lint": "eslint src/",
+        "check-types": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@repo/types": "workspace:*",
+        "ssh2": "^1.15.0",
+        "socket.io": "^4.7.2",
+        "socket.io-client": "^4.7.2",
+        "bonjour": "^3.5.0"
+    },
+    "devDependencies": {
+        "@repo/eslint-config": "workspace:*",
+        "@types/node": "^20.10.0",
+        "@types/ssh2": "^1.11.19",
+        "@types/bonjour": "^3.5.13",
+        "typescript": "5.9.3",
+        "vitest": "^2.1.8"
+    },
+    "keywords": [
+        "operone",
+        "networking",
+        "ssh",
+        "socket.io",
+        "orchestration"
+    ],
+    "author": "Operone Team",
+    "license": "MIT"
+}

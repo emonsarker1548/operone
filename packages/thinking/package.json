@@ -1,0 +1,40 @@
+{
+    "name": "@operone/thinking",
+    "version": "0.1.0",
+    "description": "Planning and reasoning engine for Operone",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test": "vitest run",
+        "lint": "eslint src/",
+        "check-types": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@repo/types": "workspace:*",
+        "@operone/memory": "workspace:*",
+        "@operone/fs": "workspace:*",
+        "@operone/shell": "workspace:*",
+        "@operone/networking": "workspace:*",
+        "@operone/ai": "workspace:*",
+        "graphlib": "^2.1.8",
+        "zod": "^3.23.8",
+        "nanoid": "^5.0.4"
+    },
+    "devDependencies": {
+        "@repo/eslint-config": "workspace:*",
+        "@types/node": "^20.10.0",
+        "@types/graphlib": "^2.1.11",
+        "typescript": "5.9.3",
+        "vitest": "^2.1.8"
+    },
+    "keywords": [
+        "operone",
+        "planning",
+        "reasoning",
+        "graph"
+    ],
+    "author": "Operone Team",
+    "license": "MIT"
+}

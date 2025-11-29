@@ -2,6 +2,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createMistral } from '@ai-sdk/mistral';
+import { createOllama } from 'ollama-ai-provider-v2';
 import type { 
   ProviderConfig, 
   ProviderType, 
@@ -74,10 +75,9 @@ export class ModelProvider {
   }
 
   private createOllamaProvider(config: OllamaConfig) {
-    // Ollama uses OpenAI-compatible API
-    return createOpenAI({
-      apiKey: 'ollama', // Ollama doesn't require a real API key
-      baseURL: config.baseURL + '/v1',
+    // Use native Ollama provider
+    return createOllama({
+      baseURL: config.baseURL + '/api',
     });
   }
 
@@ -120,8 +120,14 @@ export class ModelProvider {
 
   /**
    * Get the AI SDK embedding model instance
+   * Returns null for providers that don't support embeddings (Ollama, Anthropic, OpenRouter, Custom)
+   * 
+   * Supported providers:
+   * - OpenAI: text-embedding-3-small
+   * - Google: text-embedding-004
+   * - Mistral: mistral-embed
    */
-  getEmbeddingModel() {
+  getEmbeddingModel(): any | null {
     // For now, we'll default to a standard embedding model based on the provider
     // In the future, this should be configurable
     switch (this.config.type) {
@@ -132,8 +138,8 @@ export class ModelProvider {
       case 'mistral':
         return this.provider.textEmbeddingModel('mistral-embed');
       default:
-        // Fallback or error for providers that don't support embeddings yet
-        throw new Error(`Embeddings not supported for provider: ${this.config.type}`);
+        // Return null for providers that don't support embeddings yet
+        return null;
     }
   }
 
@@ -183,22 +189,28 @@ export class ModelRegistry {
       { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai', contextWindow: 128000, description: 'Most capable GPT-4 model' },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai', contextWindow: 128000, description: 'Affordable and fast' },
       { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'openai', contextWindow: 128000, description: 'Previous generation flagship' },
+      { id: 'gpt-4', name: 'GPT-4', provider: 'openai', contextWindow: 8192, description: 'Original GPT-4' },
       { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'openai', contextWindow: 16385, description: 'Fast and efficient' },
     ],
     anthropic: [
       { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'anthropic', contextWindow: 200000, description: 'Most intelligent model' },
       { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'anthropic', contextWindow: 200000, description: 'Fastest model' },
       { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'anthropic', contextWindow: 200000, description: 'Powerful model for complex tasks' },
+      { id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet', provider: 'anthropic', contextWindow: 200000, description: 'Balanced model' },
+      { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', provider: 'anthropic', contextWindow: 200000, description: 'Fast and compact' },
     ],
     google: [
       { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', provider: 'google', contextWindow: 1000000, description: 'Latest experimental model' },
       { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'google', contextWindow: 2000000, description: 'Most capable Gemini model' },
       { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'google', contextWindow: 1000000, description: 'Fast and efficient' },
+      { id: 'gemini-1.0-pro', name: 'Gemini 1.0 Pro', provider: 'google', contextWindow: 32000, description: 'Stable pro model' },
     ],
     mistral: [
       { id: 'mistral-large-latest', name: 'Mistral Large', provider: 'mistral', contextWindow: 128000, description: 'Most capable Mistral model' },
       { id: 'mistral-small-latest', name: 'Mistral Small', provider: 'mistral', contextWindow: 32000, description: 'Efficient and fast' },
       { id: 'codestral-latest', name: 'Codestral', provider: 'mistral', contextWindow: 32000, description: 'Specialized for code' },
+      { id: 'mistral-medium', name: 'Mistral Medium', provider: 'mistral', contextWindow: 32000, description: 'Balanced model' },
+      { id: 'open-mixtral-8x22b', name: 'Mixtral 8x22B', provider: 'mistral', contextWindow: 64000, description: 'Open source powerhouse' },
     ],
     ollama: [
       // Default models - will be updated dynamically when Ollama is detected
@@ -208,12 +220,19 @@ export class ModelRegistry {
       { id: 'codellama', name: 'Code Llama', provider: 'ollama', description: 'Specialized for code' },
       { id: 'phi3', name: 'Phi-3', provider: 'ollama', description: 'Microsoft Phi-3' },
       { id: 'qwen2.5', name: 'Qwen 2.5', provider: 'ollama', description: 'Alibaba Qwen' },
+      { id: 'gemma2', name: 'Gemma 2', provider: 'ollama', description: 'Google Gemma 2' },
+      { id: 'neural-chat', name: 'Neural Chat', provider: 'ollama', description: 'Intel Neural Chat' },
+      { id: 'starling-lm', name: 'Starling LM', provider: 'ollama', description: 'High quality open model' },
     ],
     openrouter: [
       { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'openrouter', description: 'Via OpenRouter' },
       { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'openrouter', description: 'Via OpenRouter' },
       { id: 'google/gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', provider: 'openrouter', description: 'Via OpenRouter' },
       { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', provider: 'openrouter', description: 'Via OpenRouter' },
+      { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B', provider: 'openrouter', description: 'Largest open model' },
+      { id: 'mistralai/mistral-large-2407', name: 'Mistral Large 2', provider: 'openrouter', description: 'Via OpenRouter' },
+      { id: 'nvidia/llama-3.1-nemotron-70b-instruct', name: 'Llama 3.1 Nemotron', provider: 'openrouter', description: 'NVIDIA optimized' },
+      { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B', provider: 'openrouter', description: 'Top tier open model' },
     ],
     custom: [],
   };
@@ -255,6 +274,38 @@ export class ModelRegistry {
     }
 
     return this.models.ollama; // Return default models if detection fails
+  }
+
+  /**
+   * Get OpenRouter models dynamically
+   */
+  static async getOpenRouterModels(): Promise<ModelInfo[]> {
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/models', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const models = data.data || [];
+        
+        return models.map((model: any) => ({
+          id: model.id,
+          name: model.name,
+          provider: 'openrouter' as const,
+          description: `${model.description?.substring(0, 100)}...` || 'Via OpenRouter',
+          contextWindow: model.context_length || 4096,
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch OpenRouter models:', error);
+    }
+
+    return this.models.openrouter;
   }
 
   static getModels(provider: ProviderType): ModelInfo[] {
@@ -352,8 +403,8 @@ export class ProviderManager {
  */
 export function createDefaultConfig(): ProviderConfig {
   return {
-    type: 'openai',
-    model: 'gpt-4o-mini',
-    apiKey: process.env.OPENAI_API_KEY || '',
+    type: 'ollama',
+    model: 'llama3.2',
+    baseURL: 'http://localhost:11434',
   };
 }

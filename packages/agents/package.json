@@ -1,0 +1,36 @@
+{
+    "name": "@operone/agents",
+    "version": "0.1.0",
+    "description": "Autonomous agent framework for Operone",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test": "vitest run",
+        "lint": "eslint src/",
+        "check-types": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@repo/types": "workspace:*",
+        "@operone/core": "workspace:*",
+        "@operone/memory": "workspace:*",
+        "@operone/thinking": "workspace:*",
+        "@operone/ai": "workspace:*",
+        "@operone/context": "workspace:*"
+    },
+    "devDependencies": {
+        "@repo/eslint-config": "workspace:*",
+        "@types/node": "^20.10.0",
+        "typescript": "5.9.3",
+        "vitest": "^2.1.8"
+    },
+    "keywords": [
+        "operone",
+        "agents",
+        "autonomous",
+        "framework"
+    ],
+    "author": "Operone Team",
+    "license": "MIT"
+}

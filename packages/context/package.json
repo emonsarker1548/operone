@@ -1,0 +1,33 @@
+{
+    "name": "@operone/context",
+    "version": "0.1.0",
+    "description": "Context management and token counting for Operone",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test": "vitest run",
+        "lint": "eslint src/",
+        "check-types": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@repo/types": "workspace:*",
+        "tiktoken": "^1.0.10",
+        "langchain": "^0.0.200"
+    },
+    "devDependencies": {
+        "@repo/eslint-config": "workspace:*",
+        "@types/node": "^20.10.0",
+        "typescript": "5.9.3",
+        "vitest": "^2.1.8"
+    },
+    "keywords": [
+        "operone",
+        "context",
+        "tokens",
+        "llm"
+    ],
+    "author": "Operone Team",
+    "license": "MIT"
+}

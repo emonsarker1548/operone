@@ -134,10 +134,21 @@ describe('ShellTool', () => {
       expect(result.stdout).toContain('/tmp');
     });
 
-    it.skip('should handle timeout', async () => {
-      // Skipping: difficult to test timeout with security-restricted commands
-      // The timeout functionality works but requires commands that may not be available
-      // or may complete too quickly on different systems
+    it('should handle timeout', async () => {
+      // Create a custom tool with sleep allowed for this test
+      const customTool = new ShellTool(['sleep']);
+      
+      const startTime = Date.now();
+      const result = await customTool.execute({
+        command: 'sleep 2',
+        timeout: 500, // 500ms timeout for 2-second sleep
+      });
+      const duration = Date.now() - startTime;
+
+      // Should timeout and return error
+      expect(result.exitCode).not.toBe(0);
+      expect(duration).toBeLessThan(1000); // Should timeout before 1 second
+      expect(result.stderr).toBeTruthy(); // Should have error message
     }, 10000);
   });
 

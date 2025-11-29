@@ -2,7 +2,7 @@ export interface Agent {
   id: string;
   name: string;
   role: 'os' | 'assistant';
-  think(input: string): Promise<string>;
+  think(input: string, options?: any): Promise<string>;
   act(action: string): Promise<void>;
   observe(): Promise<string>;
 }
@@ -110,6 +110,23 @@ export interface ExactTextResult {
 
 export type MessageType = 'text' | 'image' | 'exact-text' | 'mixed';
 
+export interface ToolCall {
+  id: string;
+  type: string;
+  state: 'input-streaming' | 'input-available' | 'approval-requested' | 'approval-responded' | 'output-available' | 'output-error' | 'output-denied';
+  input?: any;
+  output?: any;
+  errorText?: string;
+}
+
+export interface Artifact {
+  id: string;
+  type: string;
+  title: string;
+  content: string;
+  language?: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -118,9 +135,32 @@ export interface ChatMessage {
   type?: MessageType;
   images?: GeneratedImage[];
   exactText?: ExactTextResult;
+  // Enhanced fields for rich content
+  toolCalls?: ToolCall[];
+  artifacts?: Artifact[];
+  metadata?: Record<string, any>;
 }
 
 export interface AIServiceConfig {
   defaultProvider: ProviderType;
   providers: Record<string, ProviderConfig>;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  category: string;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  conversationIds: string[];
+}
+
+export interface Chat {
+  id: string;
+  title: string;
+  projectId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  messages: ChatMessage[];
 }

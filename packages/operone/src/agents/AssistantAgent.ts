@@ -1,81 +1,165 @@
-import { Agent } from '@repo/types';
-import { RAGEngine } from '../rag/RAGEngine';
-import { MemoryManager } from '../memory/MemoryManager';
-import { generateText } from 'ai';
 import { ModelProvider } from '../model-provider';
+import { streamText, generateText } from 'ai';
+import { EventBus } from '../core/EventBus';
+import { ASSISTANT_AGENT_SYSTEM_PROMPT } from '../prompts/assistant-agent';
 
-export interface AssistantAgentConfig {
-  modelProvider: ModelProvider;
-  memoryManager: MemoryManager;
+export interface AssistantAgentOptions {
+  provider: ModelProvider;
+  eventBus?: EventBus;
 }
 
-export class AssistantAgent implements Agent {
-  public readonly id = 'assistant-agent';
-  public readonly name = 'Assistant Agent';
-  public readonly role = 'assistant' as const;
+/**
+ * AssistantAgent - General purpose AI assistant
+ * Handles conversational interactions with streaming support
+ */
+export class AssistantAgent {
+  private provider: ModelProvider;
+  private eventBus: EventBus;
+  private conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
-  private modelProvider: ModelProvider;
-  private ragEngine: RAGEngine;
-  private memoryManager: MemoryManager;
-  private lastThought: string = '';
-
-  constructor(config: AssistantAgentConfig) {
-    this.modelProvider = config.modelProvider;
-    this.memoryManager = config.memoryManager;
-    
-    // Get embedding model from provider
-    const embeddingModel = this.modelProvider.getEmbeddingModel();
-    this.ragEngine = new RAGEngine(this.memoryManager, embeddingModel);
-  }
-
-  async think(input: string): Promise<string> {
-    // Query RAG for relevant context
-    const ragResults = await this.ragEngine.query(input, 3);
-    const context = ragResults.map(r => r.content).join('\n');
-
-    // Add to short-term memory
-    this.memoryManager.addToShortTerm(input);
-
-    const systemPrompt = `You are an intelligent assistant with access to:
-- Long-term memory (RAG-based retrieval)
-- Short-term conversation memory
-- Vector-based document search
-
-Use the provided context to answer questions accurately.
-If you have a final answer, prefix it with "FINAL ANSWER:".`;
-
-    const { text } = await generateText({
-      model: this.modelProvider.getModel(),
-      system: systemPrompt,
-      prompt: `Context from memory:\n${context}\n\nUser question: ${input}\n\nProvide a thoughtful response.`,
-    });
-
-    this.lastThought = text;
-    return text;
-  }
-
-  async act(action: string): Promise<void> {
-    // Store important information in long-term memory
-    if (action.length > 50) {
-      await this.memoryManager.longTerm.store(action);
+  constructor(options: AssistantAgentOptions | ModelProvider) {
+    // Support both old and new constructor signatures
+    if (options instanceof ModelProvider) {
+      this.provider = options;
+      this.eventBus = EventBus.getInstance();
+    } else {
+      this.provider = options.provider;
+      this.eventBus = options.eventBus || EventBus.getInstance();
     }
   }
 
-  async observe(): Promise<string> {
-    return this.lastThought;
+  /**
+   * Generate a response without streaming
+   */
+  async generateResponse(message: string, context?: string[]): Promise<string> {
+    try {
+      const model = this.provider.getModel();
+      
+      // Build messages array
+      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+        { role: 'system', content: ASSISTANT_AGENT_SYSTEM_PROMPT }
+      ];
+
+      // Add conversation history
+      this.conversationHistory.forEach(msg => {
+        messages.push(msg);
+      });
+
+      // Add context if provided
+      if (context && context.length > 0) {
+        messages.push({
+          role: 'system',
+          content: `Relevant context:\n${context.join('\n')}`
+        });
+      }
+
+      // Add current message
+      messages.push({ role: 'user', content: message });
+
+      const { text } = await generateText({
+        model,
+        messages,
+      });
+
+      // Update conversation history
+      this.conversationHistory.push({ role: 'user', content: message });
+      this.conversationHistory.push({ role: 'assistant', content: text });
+
+      // Keep only last 10 messages
+      if (this.conversationHistory.length > 20) {
+        this.conversationHistory = this.conversationHistory.slice(-20);
+      }
+
+      return text;
+    } catch (error) {
+      console.error('Error generating response:', error);
+      throw error;
+    }
   }
 
   /**
-   * Ingest documents into the RAG system
+   * Generate a streaming response
    */
-  async ingestDocument(id: string, content: string, metadata?: Record<string, any>): Promise<void> {
-    await this.ragEngine.ingestDocument(id, content, metadata);
+  async generateStreamingResponse(
+    message: string,
+    context?: string[],
+    onToken?: (token: string) => void
+  ): Promise<string> {
+    try {
+      const model = this.provider.getModel();
+      
+      // Build messages array
+      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+        { role: 'system', content: ASSISTANT_AGENT_SYSTEM_PROMPT }
+      ];
+
+      // Add conversation history
+      this.conversationHistory.forEach(msg => {
+        messages.push(msg);
+      });
+
+      // Add context if provided
+      if (context && context.length > 0) {
+        messages.push({
+          role: 'system',
+          content: `Relevant context:\n${context.join('\n')}`
+        });
+      }
+
+      // Add current message
+      messages.push({ role: 'user', content: message });
+
+      const result = await streamText({
+        model,
+        messages,
+      });
+
+      let fullText = '';
+
+      // Stream tokens
+      for await (const chunk of result.textStream) {
+        fullText += chunk;
+        
+        // Emit token via event bus
+        this.eventBus.publish('stream', 'token', chunk);
+        
+        // Call callback if provided
+        if (onToken) {
+          onToken(chunk);
+        }
+      }
+
+      // Update conversation history
+      this.conversationHistory.push({ role: 'user', content: message });
+      this.conversationHistory.push({ role: 'assistant', content: fullText });
+
+      // Keep only last 20 messages
+      if (this.conversationHistory.length > 20) {
+        this.conversationHistory = this.conversationHistory.slice(-20);
+      }
+
+      // Emit completion
+      this.eventBus.publish('stream', 'complete', fullText);
+
+      return fullText;
+    } catch (error) {
+      console.error('Error generating streaming response:', error);
+      this.eventBus.publish('stream', 'error', error instanceof Error ? error.message : 'Unknown error');
+      throw error;
+    }
   }
 
   /**
-   * Get RAG statistics
+   * Clear conversation history
    */
-  getStats() {
-    return this.ragEngine.getStats();
+  clearHistory(): void {
+    this.conversationHistory = [];
+  }
+
+  /**
+   * Get conversation history
+   */
+  getHistory(): Array<{ role: 'user' | 'assistant'; content: string }> {
+    return [...this.conversationHistory];
   }
 }
